@@ -1,6 +1,6 @@
 .SUFFIXES: .cc
 
-CC = g++
+CC = /usr/bin/gcc
 
 PATH_ALGLIB = /home/nick/HDD/Work/GNU/ALGLIB/mpfr/out
 PATH_GMP = /home/nick/HDD/Work/GNU/gmp-6.0.0

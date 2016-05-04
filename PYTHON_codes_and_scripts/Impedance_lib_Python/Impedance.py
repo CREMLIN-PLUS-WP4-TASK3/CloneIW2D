@@ -8,9 +8,11 @@ import commands
 user=commands.getoutput("echo $USER");
 if (len(user)>0): user_option=" -u "+user;
 else: user_option='';
-# define path for Yokoya factors file (environment variable YOK_PATH should be previously defined - see script_configure_bashrc.sh)
+# define path for Yokoya factors file (environment variable YOK_PATH should be previously defined 
+#- see script_configure_bashrc.sh)
 Yokoya_path=commands.getoutput("echo $YOK_PATH");
-# define path for IW2D executables (environment variable IW2D_PATH should be previously defined - see ../../ImpedanceWake2D/script_configure_bashrc.sh)
+# define path for fiIW2D executables (environment variable IW2D_PATH should be previously defined 
+#- see ../../ImpedanceWake2D/script_configure_bashrc.sh)
 IW2D_path=commands.getoutput("echo $IW2D_PATH");
 # import local libraries if needed
 pymod=commands.getoutput("echo $PYMOD");
@@ -20,8 +22,9 @@ if pymod.startswith('local'):
     py_matpl=commands.getoutput("echo $PY_MATPL");sys.path.insert(1,py_matpl);
 from string import *
 import numpy as np
-import pylab,re,os
-from plot_lib import *
+import re,os
+#import matplotlib
+#from plot_lib import *
 from io_lib import *
 from tables_lib import *
 from fourier_lib import *
@@ -43,15 +46,15 @@ class layer(object):
 	self.thickness=thickness;
 	
 
-def CFC_layer(thickness=25e-3):
+def CFC_layer(thickness=25e-3,Ageing_factor=1):
     '''define a layer of CFC (carbon fiber-reinforced carbon), type Tatsuno AC150
-    see N. Mounet PhD thesis for references.'''
+    see N. Mounet PhD thesis for references. It consider an ageing factor to make wort the resisitivity with time.'''
     
-    return layer(rhoDC=5e-6,tau=4.2e-12,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+    return layer(rhoDC=5e-6*float(Ageing_factor),tau=4.2e-12,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
 def graphite_layer(thickness=25e-3):
     '''define a layer of graphite, type SGL R4550
-    see N. Mounet PhD thesis for references.'''
+    see N. Mounet PhD thesis for references'''
     
     return layer(rhoDC=15e-6,tau=1.3e-12,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
@@ -82,12 +85,23 @@ def Cu300K_in_TDI_layer(thickness=1e-6):
     '''
     
     return layer(rhoDC=2.6e-8,tau=0.027e-12/(2.6/1.7),epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+def CuCr1Zr_layer(thickness=1e-6):
+    '''define a layer of Coper Zirconium material for the third block of the TDI. Conductivity is 80%IACS. Inigo Lamas Garcia 02/11/2015)
+    '''
     
+    return layer(rhoDC=2.15e-8,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+ 
 def W_layer(thickness=25e-3):
     '''define a layer of pure tungsten material
     see N. Mounet PhD thesis for references.'''
     
     return layer(rhoDC=5.4e-8,tau=0.005e-12,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+def Alu_layer(rhoDC=2.65e-8,thickness=1e-2):
+    '''define a layer of pure aluminum material.'''
+    
+    return layer(rhoDC=2.65e-8,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
 def Ti_layer(thickness=3e-6):
     '''define a layer of pure titanium material
@@ -106,7 +120,16 @@ def Al_layer(thickness=54e-3):
     see N. Mounet PhD thesis for references.'''
     
     return layer(rhoDC=2.7e-8,tau=0.008e-12,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
-    
+
+def TiB2_layer(thickness=5e-6):
+	''' from F.Carra email 27-04-2015 11.1 MS/m (Mo is 20MS/m)'''
+	return layer(rhoDC=9e-8,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+def TiN_layer(thickness=5e-6):
+	''' from F.Carra email 27-04-2015 2.5 MS/m (Mo is 20MS/m)'''
+	return layer(rhoDC=4e-7,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+
 def Mo_layer(thickness=50e-6):
     '''define a layer of pure molybdenum material
     see A. Bertarelli...'''
@@ -115,9 +138,26 @@ def Mo_layer(thickness=50e-6):
     
 def MoC_layer(thickness=25e-3):
     '''define a layer of molybdenum-graphite material
-    see A. Bertarelli...'''
+    mail from Luca Gentilini on 2-12-2014:
+    Ici les proprietes :
+    NB: (L)=longitudinal, (T)=transversal
+    Densite: 2.65 g/cm3
+    Conductivite electrique: 0.81 MS/m (L), 0.4 MS/m (T)
+    Coefficient dilatation thermique: 3.0e-6 K-1 (L), 20e-6 K-1 (T)
+    Module de Young: 62.7 MPa (L), 6.9 MPa (T)
+    Tensile strength: 73 MPa (L), 17.5 MPa (T)
+    We assume only L conductivity for the moment. 
     
-    return layer(rhoDC=1.e-6,tau=0.,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+    From: Alessandro Bertarelli
+    Sent: 05 January 2015 15:43
+    To: Benoit Salvant
+    Subject: Measurement of Electrical conductivity
+    Conductivity of MoGr is ~1MS/m
+    
+    
+    '''
+    
+    return layer(rhoDC=1e-6,tau=0.,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
 def hBN_layer(thickness=54e-3):
     '''define a layer of pure hBN material
@@ -195,6 +235,11 @@ def vacuum_layer(thickness=np.inf):
     '''define a vacuum layer'''
     
     return layer(rhoDC=np.inf,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+def Z_layer(rhoDC=1.7e-8,thickness=0.001):
+    '''define a generic conducting layer'''
+    
+    return layer(rhoDC=rhoDC,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
 
 def find_nmaterial(param_filename):
@@ -234,19 +279,26 @@ def read_materials(param_filename,ind):
     return material,thick,nmat;
     
 
-def construct_layers(layers,thickness=[],Bfield=0):
+def construct_layers(layers,thickness=[],Bfield=0,Age=[],rhoDC=[]):
     ''' Construct list of layer ojects from a list of either layer object
     OR material names (if material names then the corresponding 
     thicknesses should be given). List elements can also be 'None' or None
     (then no layer).
-    Bfield should be given in case of Cu20K (magnetoresistant).'''
-    
+    Bfield should be given in case of Cu20K (magnetoresistant).
+    Age indicates an ageing factor for the primary and secondaries in CFC.
+    Rho indicated if specific conductivities have to be changed. '''
+
+    if not Age: Age=np.ones(len(thickness));
     layers_iw=[];
     for ilay,lay in enumerate(layers):
         if isinstance(lay,layer): layers_iw.append(lay);
 	elif lay.startswith('Cu20K'):
 	    # cold copper case: take into account magnetoresistance
 	    eval('layers_iw.append('+lay+'_layer(thickness=thickness[ilay],B=Bfield))');
+	elif lay.startswith('CFC'):
+	    eval('layers_iw.append('+lay+'_layer(thickness=thickness[ilay],Ageing_factor=Age[ilay]))')
+        elif lay.startswith('Z'):
+	    eval('layers_iw.append('+lay+'_layer(thickness=thickness[ilay],rhoDC=rhoDC[ilay]))');
 	elif (lay.startswith('None'))or(lay==None):
 	    # do nothing
 	    pass;
@@ -358,7 +410,7 @@ def write_layer(file1,n,layer):
     write_line(file1,"Layer "+str(n)+" real part of dielectric constant:",layer.epsb);
     write_line(file1,"Layer "+str(n)+" magnetic susceptibility:",layer.mur-1.);
     write_line(file1,"Layer "+str(n)+" relaxation frequency of permeability (MHz):",layer.fmu/1e6);
-    write_line(file1,"Layer "+str(n)+" thickness in mm:",layer.thickness*1e3);
+    write_line(file1,"Layer "+str(n)+" thickness in mm:",float(layer.thickness)*1e3);
 
 
 def write_freq_param(file1,fpar):
@@ -745,7 +797,7 @@ def longitudinal_imp_holes_in_round_pipe_Mostacci(freq,Lh,Wh,T,b,d,eta,rhob,rhod
     alphae,alpham=polarizabilities_hole_Mostacci(Lh,Wh,T,Cm=Cm,Ce=Ce);
     
     Zl=np.zeros((len(freq),2));
-    ind=pylab.mlab.find(freq<=fcutoff);
+    ind=np.where(freq<=fcutoff);
     # real part of longitudinal impedance, from A. Mostacci PhD, eq. 1.35 (approx. formula)
     # (due to propagating TEM coaxial mode outside the pipe)
     Zl[ind,0]=Z0*omega[ind]**2*(alpham+alphae)**2*(N/2.+N/(alpha[ind]*D)+(np.exp(-alpha[ind]*D*N)-1)/(alpha[ind]*D)**2)/(16*np.pi**3*b**2*b2**2*np.log(d/b2)*clight**2);
@@ -1244,6 +1296,22 @@ class impedance_wake(object):
 	# imag. parts (Ohm/m^(a+b+c+d) for impedances, V/C/m^(a+b+c+d) for wakes).
 	# Usually imaginary part of wake is zero, but could be non zero (for e.g. feedback wakes).
 
+def plot_impmod(imp_mod,comp,axtypex,axtypey,nfig):
+        
+        from pylab import *
+        
+        a,b,c,d,plane,wakeflag=identify_component(comp)
+        for imp_comp in imp_mod:
+            if test_impedance_wake_comp(imp_comp, a, b, c, d, plane):
+                Z=imp_comp.func[:,0]+1j*imp_comp.func[:,1]
+                freq=imp_comp.var
+
+        # A plot     
+        figure(nfig)
+        semilogx(freq,imag(Z),'-r')    
+        semilogx(freq,real(Z),'-b')
+
+
 
 def freqscan_from_fpar(fpar):
     '''gives frequency scan associated with a freq_param object'''
@@ -1553,6 +1621,7 @@ def imp_model_from_IW2D(iw_input,wake_calc=False,path=IW2D_path,
     
     # save path and go to executable path
     oldpath=os.getcwd(); # commands.getoutput("pwd");
+    
     os.chdir(path);
     # write input file
     filename='IW2D_input'+iw_input.comment+'.txt';
@@ -1585,12 +1654,16 @@ def imp_model_from_IW2D(iw_input,wake_calc=False,path=IW2D_path,
 	deltab=[0.,0.005,-0.005,0.01,-0.01];status=1;ib=0;
 	while ((status!=0)and(ib<len(deltab))): # scan closed-by radii to the one looked for
 	    fb=iw_input.b[0]*1e3+deltab[ib];strb="%.2lf" % fb;
-	    status,name=commands.getstatusoutput("ls "+dire+"InputData*"+str(nup)+'layer*'+strb+"mm"+iw_input.comment+".dat");
+	    #status,name=commands.getstatusoutput("ls "+dire+"InputData*"+str(nup)+'layer*'+strb+"mm"+iw_input.comment+".dat");
+	    status,name=commands.getstatusoutput("ls "+dire+"InputData*"+str(nup)+'layer*'+iw_input.comment+".dat");
+
 	    ib+=1;
 	if (status!=0):
-	    print "\n Error: File",path+'/'+dire+"InputData*"+str(nup)+'layer*'+strb+"mm"+iw_input.comment+".dat not found !"
+	    print "\n Error: File",path+'/'+dire+"InputData*"+str(nup)+'layer*'+iw_input.comment+".dat not found !"
 	    print " Probably computation failed; try with a longer queue (current queue:",queue+")";
-	    sys.exit();
+	    os.system("bsub"+user_option+" -e error1.out -q "+queue+" batch"+iw_input.comment+".job");
+
+	    #sys.exit();
 	#print iw_input.b[0]*1e3,fb,strb,status,name
 
 	suffix1=name.replace(dire+'InputData','');
@@ -1606,6 +1679,10 @@ def imp_model_from_IW2D(iw_input,wake_calc=False,path=IW2D_path,
 	for icomp in range(ncomp):
     	    namecomp=listname[icomp];
 	    freq,Z=readZ(dire+"Z"+namecomp+suffix);
+	    if len(Z)==0: 
+		    print 'File Z'+namecomp+suffix+' has no data!';
+		    print 'Probably lxplus queue issue..'
+		    sys.exit();
 	    imp_model.append(impedance_wake(a=lista[icomp],b=listb[icomp],c=listc[icomp],
 		    d=listd[icomp],plane=listplane[icomp],var=freq,func=Z));
 
@@ -1623,7 +1700,23 @@ def imp_model_from_IW2D(iw_input,wake_calc=False,path=IW2D_path,
 	if flagrm: 
 	    #os.system("rm -f "+dire+"*"+suffix1.replace(".dat","*.dat"));
 	    os.system("rm -rf LSFJOB_* error1.out batch"+iw_input.comment+".job "+filename);
-    
+     
+     
+    elif (lxplusbatch.startswith('relaunch')):
+	# extract output suffix
+	deltab=[0.,0.005,-0.005,0.01,-0.01];status=1;ib=0;
+	while ((status!=0)and(ib<len(deltab))): # scan closed-by radii to the one looked for
+	    fb=iw_input.b[0]*1e3+deltab[ib];strb="%.2lf" % fb;
+	    #status,name=commands.getstatusoutput("ls "+dire+"InputData*"+str(nup)+'layer*'+strb+"mm"+iw_input.comment+".dat");
+	    status,name=commands.getstatusoutput("ls "+dire+"Zxquad*"+str(nup)+'layer*'+iw_input.comment+".dat");
+
+	    ib+=1;
+	if (status!=0):
+	    print "\n Error: File",path+'/'+dire+"InputData*"+str(nup)+'layer*'+iw_input.comment+".dat not found !"
+	    print " Probably computation failed; try with a longer queue (current queue:",queue+")";
+	    os.system("bsub"+user_option+" -e error1.out -q "+queue+" batch"+iw_input.comment+".job");
+
+   
     # go back to previous path
     os.chdir(oldpath);
     
@@ -1748,18 +1841,18 @@ def imp_model_resonator(Rlist,frlist,Qlist,beta=1,wake_calc=False,
     for icomp,comp in enumerate(listcomp):
     	a,b,c,d,plane,wakeflag=identify_component(comp);
 	R=Rlist[icomp];fr=frlist[icomp];Q=Qlist[icomp];
-	
-	if (comp[1]=='l'): strlong='_long';
-	else: strlong='';
-	
-	Z=eval('resonator'+strlong+'_impedance(R,fr,Q,freq)');
-    	imp_mod.append(impedance_wake(a=a,b=b,c=c,d=d,plane=plane,var=freq,func=Z));
-	    
-	if wake_calc:
-	    W=np.zeros((len(z),2));
-	    tmp=eval('resonator'+strlong+'_wake(R,fr,Q,tau)')
-	    W[:,0]=tmp[:,0]
-	    wake_mod.append(impedance_wake(a=a,b=b,c=c,d=d,plane=plane,var=z,func=W));
+	if Q!=0:
+		if (comp[1]=='l'): strlong='_long';
+		else: strlong='';
+		
+		Z=eval('resonator'+strlong+'_impedance(R,fr,Q,freq)');
+		imp_mod.append(impedance_wake(a=a,b=b,c=c,d=d,plane=plane,var=freq,func=Z));
+		    
+		if wake_calc:
+		    W=np.zeros((len(z),2));
+		    tmp=eval('resonator'+strlong+'_wake(R,fr,Q,tau)')
+		    W[:,0]=tmp[:,0]
+		    wake_mod.append(impedance_wake(a=a,b=b,c=c,d=d,plane=plane,var=z,func=W));
 
     return imp_mod,wake_mod;
     
@@ -1820,7 +1913,7 @@ def imp_model_holes_Mostacci(Lh,Wh,T,b,d,eta,rhob,rhod,length,
     return imp_mod,wake_mod;
 
 
-def imp_model_from_HOMfile(filename,beta=1,fpar=freq_param(ftypescan=0,nflog=100),zpar=z_param()):
+def imp_model_from_HOMfile(filename,beta=1,unit_freq='Hz',spread=False, spread_rng=3e6, seed=False,damp_fm=False,fpar=freq_param(ftypescan=0,nflog=100),zpar=z_param()):
 
     '''Create an impedance or wake model from a file containing HOMs (high
     order modes) data, i.e. resonator models data. Impedance / wake is in 
@@ -1831,7 +1924,16 @@ def imp_model_from_HOMfile(filename,beta=1,fpar=freq_param(ftypescan=0,nflog=100
     - same with Ryd(ip), Rxq(uad), Ryq(uad)
     - same with Ql, Qxd(ip), etc. for each quality factor
     - same with fl, fxd(ip), etc. for each resonance frequency.
-    beta indicates the relativistic velocity factor.
+    Input:
+    filename: the HOM filename to model.
+    beta: indicates the relativistic velocity factor.
+    unit_freq: units in the filename HOM frequency
+    spread: if True applies a uniform spread within (spread_rng)
+    spread_rng: defines max frequency spread of the HOM (uniform distribution +/- spread_rng)
+    seed: seed for random generator (True or False)
+    damp_fm: if True, damp the first mode (fundamental mode) putting R=R/Q and Q=1. It applies only in transverse.
+    fpar: frequency range (it is then expanded with HOMs)
+    zpar: position range.
     '''
     
     colname=['Rl','Rxd','Ryd','Rxq','Ryq'];
@@ -1839,14 +1941,25 @@ def imp_model_from_HOMfile(filename,beta=1,fpar=freq_param(ftypescan=0,nflog=100
     
     # read file
     for icol,col in enumerate(colname):
+        
     
-	R=read_ncol_file_identify_header(filename,col,dispflag=False);
-	fr=read_ncol_file_identify_header(filename,col.replace('R','f'),dispflag=False);
-	Q=read_ncol_file_identify_header(filename,col.replace('R','Q'),dispflag=False);
-	
-	if (len(R)*len(fr)*len(Q)>0):
-	    complist.append(col.replace('R','Z'));
-	    Rlist.append(R);frlist.append(fr);Qlist.append(Q);
+        R=read_ncol_file_identify_header(filename,col,dispflag=False);
+        fr=read_ncol_file_identify_header(filename,col.replace('R','f'),dispflag=False);
+        Q=read_ncol_file_identify_header(filename,col.replace('R','Q'),dispflag=False);
+        if spread:
+	     if seed:
+		np.random.seed(seed)
+   	     deltaf=np.random.uniform(-spread_rng,spread_rng,len(fr))
+             fr+=deltaf
+            
+        if (damp_fm) and (icol!=0) and (len(R)>0):
+            print 'Damp fundamental mode'
+            R[0]=R[0]/Q[0]
+            Q[0]=1
+
+        if (len(R)*len(fr)*len(Q)>0):
+            complist.append(col.replace('R','Z'));
+            Rlist.append(R);frlist.append(fr);Qlist.append(Q);
     
     if (len(complist)==0): print "Pb in imp_model_from_HOMfile: no valid data in HOM file!";sys.exit();
     
@@ -1855,22 +1968,52 @@ def imp_model_from_HOMfile(filename,beta=1,fpar=freq_param(ftypescan=0,nflog=100
     
     # sum all modes
     for i in range(len(Rlist[0])):
-    	# compute resonator model for each mode
-	Rlistcomp=[Rlist[icomp][i] for icomp in range(len(complist))];
-	frlistcomp=[frlist[icomp][i] for icomp in range(len(complist))];
-	Qlistcomp=[Qlist[icomp][i] for icomp in range(len(complist))];
-	
-	imp,wake=imp_model_resonator(Rlistcomp,frlistcomp,Qlistcomp,beta=beta,
-		wake_calc=True,fpar=fpar,zpar=zpar,listcomp=complist);
-	
-	add_impedance_wake(imp_mod,imp,1,1);
-    	add_impedance_wake(wake_mod,wake,1,1);
-	
-	
+            # compute resonator model for each mode
+        Rlistcomp=[Rlist[icomp][i] for icomp in range(len(complist))];
+        Qlistcomp=[Qlist[icomp][i] for icomp in range(len(complist))];
+        if unit_freq=='MHz':
+            fact=1e6;
+        elif unit_freq=='GHz':
+            fact=1e9;
+        else:
+            fact=1
+
+
+        frlistcomp=[frlist[icomp][i]*fact for icomp in range(len(complist))];
+
+        # define frequency axis
+
+
+        freq=pow(10,np.arange(1,15,1/10.0));
+        for kk in range(len(frlistcomp)):
+            fres=frlistcomp[kk];
+            Q=Qlistcomp[kk];
+            if Q!=0:
+                D=fres/2/Q;
+                N=50;
+                freq_reso=np.array([fres]);
+                for nn in 10**(np.arange(0,11,2.)/2):
+                    frmin=np.min(fres);frmax=np.max(fres);
+                    freq_reso=np.concatenate([freq_reso,np.arange(frmin-nn*D,frmin,(nn*D)/N)]);
+                    freq_reso=np.concatenate([freq_reso,np.arange(frmax,frmax+nn*D,(nn*D)/N)]);
+                freq_reso=np.sort(np.unique(freq_reso));
+                freq=np.sort(np.concatenate([freq,freq_reso]));
+                freq=np.unique(freq[freq>0])
+
+
+        fpar=freq_param(ftypescan=1,fmin=1e6,fmax=1e6,fsamplin=1e6,fadded=freq);
+        zpar=z_param();
+
+        imp,wake=imp_model_resonator(Rlistcomp,frlistcomp,Qlistcomp,beta=beta,wake_calc=True,fpar=fpar,zpar=zpar,listcomp=complist);
+
+        add_impedance_wake(imp_mod,imp,1,1);
+        add_impedance_wake(wake_mod,wake,1,1);
+
+
     return imp_mod,wake_mod;
     
 
-def imp_model_striplineBPM_Ng(l,angle,b,Zc=50.,beta=1,wake_calc=False,
+def imp_model_striplineBPM_Ng(l,angle,b,Zc=50.,beta=1,plane='x',wake_calc=False,
 	fpar=freq_param(ftypescan=0,nflog=100),zpar=z_param()):
 
     '''compute impedance and wake model from Ng formula as quoted in
@@ -1896,13 +2039,17 @@ def imp_model_striplineBPM_Ng(l,angle,b,Zc=50.,beta=1,wake_calc=False,
     imp_mod.append(impedance_wake(a=0,b=0,c=0,d=0,plane='z',var=freq,func=Zl));
     
     Zt=transverse_imp_striplineBPM_Ng(l,angle,b,freq,Zc=50);
-    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=freq,func=Zt));
-    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=freq,func=Zt));
+    if plane=='x':
+	    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=freq,func=Zt));
+    else:
+	    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=freq,func=Zt));
 	    
     if wake_calc:
 	Wt=transverse_wake_striplineBPM_Ng(l,angle,b,z,Zc=50);
-	wake_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=z,func=Wt));
-	wake_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=z,func=Wt));
+	if plane=='x':
+		wake_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=z,func=Wt));
+	else:
+		wake_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=z,func=Wt));
 
     return imp_mod,wake_mod;
 
@@ -2013,7 +2160,7 @@ def power_spectrum(f,sigz,powerspectrum='gaussian'):
 
     c=299792458; # speed of light
 
-    if pylab.is_numlike(powerspectrum)and(len(powerspectrum[0,:])==2):
+    if isinstance(powerspectrum,np.ndarray)and(len(powerspectrum[0,:])==2):
         # customized bunch spectrum
         spec=np.interp(f,powerspectrum[:,0],powerspectrum[:,1]);
     
@@ -2190,8 +2337,8 @@ def hmmsum(m,omega0,M,offk,taub,omegaksi,eps=1e-5,omegas=0.,kmax=20,modetype='si
     
     if flagtrapz:
 	# initialization of correcting term sum_i (with an integral instead of discrete sum)
-	ind_i=pylab.mlab.find(np.sign(omega-omegak-Momega0)*np.sign(omega-1e15)==-1);
-	ind_mi=pylab.mlab.find(np.sign(omega-omegak+Momega0)*np.sign(omega+1e15)==-1);
+	ind_i=np.where(np.sign(omega-omegak-Momega0)*np.sign(omega-1e15)==-1);
+	ind_mi=np.where(np.sign(omega-omegak+Momega0)*np.sign(omega+1e15)==-1);
 	omega_i=omega[ind_i];
 	omega_mi=omega[ind_mi];
 	hmm_i=hmm(m,omega_i-omegaksi,taub,modetype=modetype);
@@ -2223,8 +2370,8 @@ def hmmsum(m,omega0,M,offk,taub,omegaksi,eps=1e-5,omegas=0.,kmax=20,modetype='si
 
 	if flagtrapz:
 	    # subtract correction (rest of the sum considered as integral -> should suppress redundant terms)
-	    ind_i=pylab.mlab.find(np.sign(omega-omegak[0])*np.sign(omega-omegak[-1]-Momega0)==-1);
-	    ind_mi=pylab.mlab.find(np.sign(omega-omegamk[0])*np.sign(omega-omegamk[-1]+Momega0)==-1);
+	    ind_i=np.where(np.sign(omega-omegak[0])*np.sign(omega-omegak[-1]-Momega0)==-1);
+	    ind_mi=np.where(np.sign(omega-omegamk[0])*np.sign(omega-omegamk[-1]+Momega0)==-1);
 	    omega_i=omega[ind_i];
 	    omega_mi=omega[ind_mi];
 	    hmm_i=hmm(m,omega_i-omegaksi,taub,modetype=modetype);
@@ -2252,7 +2399,79 @@ def hmmsum(m,omega0,M,offk,taub,omegaksi,eps=1e-5,omegas=0.,kmax=20,modetype='si
     
     return sum1;
 
+def Zl_eff(imp_mod,machine,l):
+    '''Computes the longitudinal effective Zl/n for a given impedance model and a given azimuthal mode 'l'.
+    Zleff=Zl_eff(imp_mod,machine,l):
+    - imp_mod is the impedance model, of which the 'Zlong' component will be used
+    - machine is the class defined for the machine: the code relies in the definition of machine.taub (4*rms bunch length in seconds), the sigma_z will be recalculated.
+    - l is the azimuthal mode of Hermite (or Gaussian) modes.
+    
+    Returns Zleff complex number.
+    '''
+    
+    import scipy.constants
+    clight=scipy.constants.c
 
+    Qs=machine.Qs
+    taub=machine.taub
+    f0=machine.f0
+    sigma_z=machine.taub*clight/4
+    compname='Zlong'
+    nperc=1e-3 # tolerance on spectrum
+    modeltype='Gaussian'
+    
+
+
+    # find the correct component in imp_mod
+    a,b,c,d,plane,wakeflag=identify_component(compname);
+    k_comp=-1;
+    for kiw,iw in enumerate(imp_mod):
+        if test_impedance_wake_comp(iw,a,b,c,d,plane): k_comp=kiw;
+
+    if (k_comp==-1): print "Pb in sacherer: component",compname,"not found!";sys.exit();
+
+    freq=imp_mod[k_comp].var;
+    Zreal=imp_mod[k_comp].func[:,0]; # real part of impedance
+    Zimag=imp_mod[k_comp].func[:,1]; # imag. part of impedance
+
+    omegap=2.*np.pi*freq;omegam=-omegap[::-1];
+    Zpcomp=Zreal+1j*Zimag;Zmcomp=Zpcomp[::-1].conjugate(); # compute complex impedance and 'symmetrize' it for negative frequencies
+    omega=np.concatenate((omegam,omegap));
+    Zcomp=np.concatenate((Zmcomp,Zpcomp));
+
+
+    omega_0=2*np.pi*f0;
+    omega_s=Qs*omega_0;
+
+    if modeltype=='Gaussian':
+
+        h=(omega*sigma_z/clight)**(2*l)*np.exp(-omega**2*sigma_z**2/clight**2);
+
+        omega_part=omega[omega>0];
+        h_part=h[omega>0];
+        omega_max=omega_part[h_part.argmax()];
+        h_part2=h_part[omega_part>omega_max];
+        omega_part2=omega_part[omega_part>omega_max];
+        h_part2,ind=np.unique(h_part2,return_index=True); # delete trailed zeros;
+        omega_part2=omega_part2[ind];
+        omega_extr=np.interp(nperc*h_part.max(),h_part2,omega_part2);
+
+        Pmax=np.floor(omega_extr/omega_0); 
+        print 'max number of line index Pmax=%d'%Pmax # approx value for max intergation;
+        p=np.arange(-Pmax,Pmax)
+        p=p[p!=0]
+        
+        omega_p=p*omega_0+l*omega_s;
+
+        omega_p=np.unique(omega_p);
+        h_p=np.interp(omega_p,omega,h);
+        Z_p=np.interp(omega_p,omega,Zcomp.real)+1j*np.interp(omega_p,omega,Zcomp.imag);
+        N=Z_p/omega_p*omega_0*h_p
+        D=h_p;
+
+    Zleff=np.sum(N)/np.sum(D)
+    
+    return Zleff
 
 def sacherer(imp_mod,Qpscan,nxscan,Nbscan,omegasscan,M,omega0,Q,gamma,eta,taub,mmax,
 	particle='proton',modetype='sinusoidal',compname='Zxdip'):
@@ -2331,7 +2550,7 @@ def sacherer(imp_mod,Qpscan,nxscan,Nbscan,omegasscan,M,omega0,Q,gamma,eta,taub,m
     for iQp,Qp in enumerate(Qpscan):
     
    	omegaksi=Qp*omega0/eta;
-    	flagtrapz=(np.ceil(100.*(4.*np.pi/taub+abs(omegaksi))/omega0/M)>1e4);
+    	flagtrapz=(np.ceil(100.*(4.*np.pi/taub+abs(omegaksi))/omega0/M)>1e9);
 	#print np.ceil(100.*(4.*np.pi/taub+abs(omegaksi))/omega0/M),flagtrapz
 
 	for inx,nx in enumerate(nxscan): # coupled-bunch modes
@@ -2386,7 +2605,7 @@ def write_wake_HEADTAIL(wake_mod,filename,beta=1,ncomp=6):
     
     c=299792458; # speed of light
     
-    listcomp=['Wlong','Wxdip','Wydip','Wxquad','WZyquad','Wxydip','Wxyquad','Wxcst','Wycst']
+    listcomp=['Wlong','Wxdip','Wydip','Wxquad','Wyquad','Wxydip','Wxyquad','Wxcst','Wycst']
     lista=[0,1,0,0,0,0,0,0,0];listb=[0,0,1,0,0,1,0,0,0];
     listc=[0,0,0,1,0,0,0,0,0];listd=[0,0,0,0,1,0,1,0,0];
     listplane=['z','x','y','x','y','x','x','x','y'];
@@ -2417,7 +2636,7 @@ def write_wake_HEADTAIL(wake_mod,filename,beta=1,ncomp=6):
     return;
 
 
-def write_imp_wake_mod(imp_mod,name,listcomp=['Zxdip','Zydip'],dire=''):
+def write_imp_wake_mod(imp_mod,name,listcomp=['Zxdip','Zydip'],dire='',header_flag=True):
 
     '''write files with components of an impedance or wake model given in imp_mod.
     filenames will be: [component name][name].dat 
@@ -2431,9 +2650,12 @@ def write_imp_wake_mod(imp_mod,name,listcomp=['Zxdip','Zydip'],dire=''):
     
     	a,b,c,d,plane,wakeflag=identify_component(comp);
 	unit=units[a+b+c+d];
-    
-	if wakeflag: header="Distance[m] Re_"+comp+"[V/C"+unit+"] Im_"+comp+"[V/C"+unit+"]";
-	else: header="Frequency[Hz] Re_"+comp+"[Ohm"+unit+"] Im_"+comp+"[Ohm"+unit+"]";
+
+	if header_flag:
+		if wakeflag: header="Distance[m] Re_"+comp+"[V/C"+unit+"] Im_"+comp+"[V/C"+unit+"]";
+		else: header="Frequency[Hz] Re_"+comp+"[Ohm"+unit+"] Im_"+comp+"[Ohm"+unit+"]";
+	else:
+		header=None;
 	
 	for iw in imp_mod:
 	    flag=False;
@@ -2608,7 +2830,7 @@ def plot_compare_imp_model(imp_mod_list,leglist,listcomp=['Zlong','Zxdip','Zydip
 			else: plot(imp_mod[kiw_comp].var,np.abs(ratio),r+leglist[imod],pat[ir],str2+" ratio w.r.t "+leglist[0],axratio[icomp],1,xlab=xlab,colr=col[imod]);
 
 			# find max ratio
-			ind=pylab.mlab.find((imp_mod[kiw_comp].var<boundmax)*(imp_mod[kiw_comp].var>boundmin));
+			ind=np.where((imp_mod[kiw_comp].var<boundmax)*(imp_mod[kiw_comp].var>boundmin));
 			maxratio[icomp,imod-1,ir]=np.max(ratio[ind]);
 			print r+comp+": max. ratio between",leglist[imod],"and",leglist[0],str1,":",maxratio[icomp,imod-1,ir];
 
