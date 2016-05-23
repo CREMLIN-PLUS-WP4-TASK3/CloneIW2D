@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 # library with in/out routines (read, write files)
-
 import sys
 import commands
 pymod=commands.getoutput("echo $PYMOD");
@@ -170,4 +169,33 @@ def test_and_create_dir(name):
     
     return;
    
-    
+def read_multiform_file(name,delimiter='',skiprow=0):
+	cols=[];
+	with open(name) as fa:
+		if skiprow!=0:
+			header=fa.readlines()[skiprow-1];
+			header=header.split(delimiter)
+	with open(name) as fa:
+		for line_aa in fa.readlines()[skiprow:]:
+			line_aa = line_aa.strip()
+			line=line_aa.split(delimiter)
+			cols.append(line[:])
+	header=[w.replace('\n','') for w in header];
+	return header,cols
+
+
+def select_col(header,cols,pattern):
+	
+	col_sel=[];
+
+	try:
+		ind= [i for i, item in enumerate(header) if item.startswith(pattern)];
+		if ind:
+			for i,el in enumerate(cols): col_sel.append(el[ind[0]]);
+	except ValueError:
+		ind=-1;
+
+	return ind,col_sel
+
+
+
