@@ -519,7 +519,144 @@ def write_impedance_wake_input(filename,iw_input):
     
     file1.close();
     
+def kicker_imp(a,b,d,L,material,gamma,fpar):
+    
+    from scipy.constants import c, e, epsilon_0
+    imp_mod=[];
+    
+    freq=freqscan_from_fpar(fpar)
+    Z0=120*np.pi;
+    q=e;
+    u0=Z0/c;
+    e0=epsilon_0
+    beta=np.sqrt(1.-1./gamma*82)
+    v=beta*c;
 
+    if 'ferrite' in material:
+        rho=1.e6;
+        ui=460.;
+        kf=1./(20e6);
+        media_ur='1+(ui/(1+(kf*kf*f*f)))-1j*((ui*kf*f)/(1+(kf*kf*f*f)))'
+        media_er='12-1j*(1/(om*rho*e0))';
+    elif 'graphite' in material:
+        media_ur='ur=1;';
+        media_er='er=1-1i*1e5./(om*e0)';
+
+    # longitudinal and quadrupolar impedance
+    Nmax=170
+
+    N=Z0*q/2/beta/a;
+    An=np.zeros(Nmax);
+    Zlong=[]; Zxquad=[]; Zyquad=[]
+    
+    for jj, f in enumerate(freq):
+
+        n=np.arange(Nmax)
+        g1n=(2*n+1)*np.pi/2/a;
+        k1n=(2*n+1)*np.pi/2/a;
+
+        om=2*np.pi*f;
+        k0=om/c;
+        k=om/beta/c;
+        kr=om/(beta*c*gamma);
+
+        ur=eval(media_ur);
+        er=eval(media_er);
+
+        k2n=np.array(map(cmath.sqrt,(-kr**2-k1n**2)))
+        g2n=np.array(map(cmath.sqrt,(k0**2*ur*er-k**2-g1n**2)))
+        x1=k2n*b
+        x2=g2n*(b-d)
+        Eyn=N*np.exp(1j*x1)
+
+        An = Eyn*( k2n*np.cos(x1)*(1j*k2n*gamma**2*(k**2-k0**2*er*ur)-g2n*k**2*er*1./np.tan(x2)) + np.sin(x1)*\
+        (k**2*(kr**2*er*ur+k1n**2*(1+gamma**2*(-1+er*ur))) +1j*g2n*k2n*kr**2*gamma**2*ur*np.tan(x2)) )/\
+        (k*k2n*gamma**2*(-g2n*k2n*er*np.cos(x1)**2*1./np.tan(x2)+(k**2+(-k0**2+kr**2)*er*ur+k1n**2*(1+er*ur))*\
+        np.cos(x1)*np.sin(x1)-g2n*k2n*ur*np.sin(x1)**2*np.tan(x2)));
+
+
+        Zlong.append(-L/q*np.sum(An))
+        Zxquad.append(L/k/q*np.sum(An*k1n**2))
+        Zyquad.append(L/k/q*np.sum(An*k2n**2))
+
+        # Dipolar Impedance Y
+
+    YAn=np.zeros(Nmax);
+    Zydip=[]
+
+    for jj, f in enumerate(freq):
+
+        n=np.arange(Nmax)
+
+        k1n=(2*n+1)*np.pi/2/a;
+
+        om=2*np.pi*f;
+        k0=om/c;
+        k=om/beta/c;
+        kr=om/(beta*c*gamma);
+
+        eval(media_ur);
+        eval(media_er);
+
+        k2n=np.array(map(cmath.sqrt,(-kr**2-k1n**2)));
+        k3n=np.array(map(cmath.sqrt,(k0**2*ur*er-k**2-k1n**2)));
+        x1=k2n*b;
+        x2=k3n*(b-d);
+
+
+        M1n=1j*k2n**2*k0**2*(1-er*ur)+k2n*kr**2*(1j*k2n-k3n*er*1./np.tan(x2))
+        M2n=-k1n**2*k0**2*(1-er*ur)+k2n*kr**2*ur*(-k2n*er+1j*k3n*np.tan(x2));
+        M3n=k2n*k3n*(er*np.sin(x1)**2*1./np.tan(x2)+ur*np.cos(x1)**2*np.tan(x2));
+        M4n=(k0**2*(-1+er*ur)+k2n**2*(1+er*ur))*np.cos(x1)*np.sin(x1);
+
+        YAn=(1j*Z0*k2n*L/2/a/beta/k)  *  k2n*np.exp(1j*k2n*b)*(-M1n*np.sin(x1)+M2n*np.cos(x1))/(k*k2n*(M3n-M4n));
+
+        Zydip.append(np.sum(YAn))
+
+        # Dipolar Impedance X
+
+    XAn=np.zeros(Nmax);
+    Zxdip=[]
+
+
+    for jj, f in enumerate(freq):
+
+        n=np.arange(Nmax)
+        k1n=(n)*np.pi/a;
+
+        om=2*pi*f;
+        k0=om/c;
+        k=om/beta/c;
+        kr=om/(beta*c*gamma);
+
+        eval(media_ur);
+        eval(media_er);
+
+        k2n=np.array(map(cmath.sqrt,(-kr**2-k1n**2)));
+        k3n=np.array(map(cmath.sqrt,(k0**2*ur*er-k**2-k1n**2)));
+
+        x1=k2n*b;
+        x2=k3n*(b-d);
+
+
+        M1n=1j*k2n**2*k0**2*(1-er*ur)+k2n*kr**2*(1j*k2n-k3n*er*1./np.tan(x2))
+        M2n=-k1n**2*k0**2*(1-er*ur)+k2n*kr**2*ur*(-k2n*er+1j*k3n*np.tan(x2));
+        M3n=-k2n*k3n*(er*np.cos(x1)**2*1./np.tan(x2)+ur*np.sin(x1)**2*np.tan(x2));
+        M4n=(k0**2*(-1+er*ur)+k2n**2*(1+er*ur))*np.cos(x1)*np.sin(x1);
+
+
+        XAn=(1j*Z0*L/2/a/beta/k)  *k1n*np.exp(1j*k2n*b)*(M1n*np.cos(x1)+M2n*np.sin(x1))/(k*(M3n-M4n)); 
+        #XAn=-L*(-1i*Z0*k2n)./(2*a*beta)  .*k1n.*  (-1i*k1n.^2*(1-er*ur))./(k2n.*(M3n-M4n));
+        Zxdip.append(np.sum(XAn))
+    
+    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=0, plane ='z', var=freq, func=np.column_stack((real(Zlong),imag(Zlong))) ))
+    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0, plane ='x', var=freq, func=np.column_stack((real(Zxdip),imag(Zxdip))) ))
+    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0, plane ='y', var=freq, func=np.column_stack((real(Zydip),imag(Zydip))) ))
+    imp_mod.append(impedance_wake(a=0,b=0,c=1,d=0, plane ='x', var=freq, func=np.column_stack((real(Zxquad),imag(Zxquad))) ))
+    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=1, plane ='y', var=freq, func=np.column_stack((real(Zyquad),imag(Zyquad))) ))
+    
+    return imp_mod
+    
 def transverse_imp_taper_round_Yokoya(a,b,tantheta):
     
     '''computes transverse R/Q (broad-band) in Ohm/m of one single round linear taper using 
