@@ -522,6 +522,7 @@ def write_impedance_wake_input(filename,iw_input):
 def kicker_imp(a,b,d,L,material,gamma,fpar):
     
     from scipy.constants import c, e, epsilon_0
+    import cmath
     imp_mod=[];
     
     freq=freqscan_from_fpar(fpar)
@@ -529,7 +530,7 @@ def kicker_imp(a,b,d,L,material,gamma,fpar):
     q=e;
     u0=Z0/c;
     e0=epsilon_0
-    beta=np.sqrt(1.-1./gamma*82)
+    beta=np.sqrt(1.-1./gamma**2)
     v=beta*c;
 
     if 'ferrite' in material:
@@ -624,7 +625,7 @@ def kicker_imp(a,b,d,L,material,gamma,fpar):
         n=np.arange(Nmax)
         k1n=(n)*np.pi/a;
 
-        om=2*pi*f;
+        om=2*np.pi*f;
         k0=om/c;
         k=om/beta/c;
         kr=om/(beta*c*gamma);
@@ -649,11 +650,11 @@ def kicker_imp(a,b,d,L,material,gamma,fpar):
         #XAn=-L*(-1i*Z0*k2n)./(2*a*beta)  .*k1n.*  (-1i*k1n.^2*(1-er*ur))./(k2n.*(M3n-M4n));
         Zxdip.append(np.sum(XAn))
     
-    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=0, plane ='z', var=freq, func=np.column_stack((real(Zlong),imag(Zlong))) ))
-    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0, plane ='x', var=freq, func=np.column_stack((real(Zxdip),imag(Zxdip))) ))
-    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0, plane ='y', var=freq, func=np.column_stack((real(Zydip),imag(Zydip))) ))
-    imp_mod.append(impedance_wake(a=0,b=0,c=1,d=0, plane ='x', var=freq, func=np.column_stack((real(Zxquad),imag(Zxquad))) ))
-    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=1, plane ='y', var=freq, func=np.column_stack((real(Zyquad),imag(Zyquad))) ))
+    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=0, plane ='z', var=freq, func=np.column_stack((np.real(Zlong),np.imag(Zlong))) ))
+    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0, plane ='x', var=freq, func=np.column_stack((np.real(Zxdip),np.imag(Zxdip))) ))
+    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0, plane ='y', var=freq, func=np.column_stack((np.real(Zydip),np.imag(Zydip))) ))
+    imp_mod.append(impedance_wake(a=0,b=0,c=1,d=0, plane ='x', var=freq, func=np.column_stack((np.real(Zxquad),np.imag(Zxquad))) ))
+    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=1, plane ='y', var=freq, func=np.column_stack((np.real(Zyquad),np.imag(Zyquad))) ))
     
     return imp_mod
     
@@ -1432,22 +1433,6 @@ class impedance_wake(object):
 	self.func=deepcopy(func); # 2-columns table with the corresponding impedance or wake function - real and 
 	# imag. parts (Ohm/m^(a+b+c+d) for impedances, V/C/m^(a+b+c+d) for wakes).
 	# Usually imaginary part of wake is zero, but could be non zero (for e.g. feedback wakes).
-
-def plot_impmod(imp_mod,comp,axtypex,axtypey,nfig):
-        
-        from pylab import *
-        
-        a,b,c,d,plane,wakeflag=identify_component(comp)
-        for imp_comp in imp_mod:
-            if test_impedance_wake_comp(imp_comp, a, b, c, d, plane):
-                Z=imp_comp.func[:,0]+1j*imp_comp.func[:,1]
-                freq=imp_comp.var
-
-        # A plot     
-        figure(nfig)
-        semilogx(freq,imag(Z),'-r')    
-        semilogx(freq,real(Z),'-b')
-
 
 
 def freqscan_from_fpar(fpar):
