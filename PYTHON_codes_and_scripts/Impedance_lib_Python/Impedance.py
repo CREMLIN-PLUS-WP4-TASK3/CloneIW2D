@@ -529,7 +529,7 @@ def kicker_imp(a,b,d,L,material,gamma,fpar):
     q=e;
     u0=Z0/c;
     e0=epsilon_0
-    beta=np.sqrt(1.-1./gamma*82)
+    beta=np.sqrt(1.-1./gamma**2)
     v=beta*c;
 
     if 'ferrite' in material:
