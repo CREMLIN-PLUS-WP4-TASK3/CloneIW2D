@@ -2324,7 +2324,7 @@ def power_loss(imp_mod,sigz,gamma,Nb,M,circum,powerspectrum='gaussian',particle=
     
     see Giovanni Rumolo's USPAS 2009 course : Collective Effects in the
     Longitudinal Plane'''
-    from particle_param import proton_param,electron_param;
+    from particle_param import *
 
     e,m0,c,E0=eval(particle+'_param()');
     beta=np.sqrt(1.-1./(gamma**2))
@@ -2631,7 +2631,7 @@ def sacherer(imp_mod,Qpscan,nxscan,Nbscan,omegasscan,M,omega0,Q,gamma,eta,taub,m
      see Elias Metral's USPAS 2009 course : Bunched beams transverse coherent
      instabilities.'''
 
-    from particle_param import proton_param,electron_param;
+    from particle_param import *
 
     e,m0,c,E0=eval(particle+'_param()');
 
