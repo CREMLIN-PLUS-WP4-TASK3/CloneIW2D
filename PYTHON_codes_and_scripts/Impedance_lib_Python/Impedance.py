@@ -172,7 +172,7 @@ def ss304L_layer(thickness=np.inf):
     return layer(rhoDC=7.2e-7,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
 def NEG_layer(thickness=1.5e-6):
-    '''define a layer of NEG material at room temperature'''
+    '''define a layer of NEG material at room temperature e.g. see http://accelconf.web.cern.ch/accelconf/IPAC2014/papers/wepme050.pdf'''
     
     return layer(rhoDC=1.e-6,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
     
