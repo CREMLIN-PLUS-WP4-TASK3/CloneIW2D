@@ -1163,7 +1163,7 @@ def longitudinal_imp_striplineBPM_Ng(l,angle,freq,Zc=50):
     
     Zl[:,0]=2*(np.sin(k*l))**2;
     Zl[:,1]=np.sin(2*k*l);
-    Zl *= 2*Zc*(angle/(2*np.pi))**2;
+    Zl *= Zc*(angle/(2*np.pi))**2;
     
     return Zl;
     
