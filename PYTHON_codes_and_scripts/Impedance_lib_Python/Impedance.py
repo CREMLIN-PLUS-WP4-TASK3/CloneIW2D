@@ -1147,6 +1147,73 @@ def integral_Kurennoy_num(b,a,c):
     
     return result;
     
+def longitudinal_imp_4striplinesBPM_Ng(l,angle,freq,Zc=50):
+
+    '''compute longitudinal impedance from Ng formula as quoted in
+    Handbook of Accelerator Physics and Engr., sec 3.2 (Impedances and wakes functions)
+    
+    l = length of strips (=electrodes), angle = azimuthal angle over which each of them is seen
+    Zc = characterisitc impedance of transmission lines from strips (usually
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for 2 pairs of striplines in symmetric position.
+    '''
+    
+    k=2.*np.pi*freq/299792458;
+    
+    Zl=np.zeros((len(freq),2));
+    
+    Zl[:,0]=2*(np.sin(k*l))**2;
+    Zl[:,1]=np.sin(2*k*l);
+    Zl *= Zc*(2*angle/(np.pi))**2;
+    
+    return Zl;
+    
+
+def transverse_imp_4striplinesBPM_Ng(l,angle,b,freq,Zc=50):
+
+    '''compute transverse impedance from Ng formula as quoted in
+    Handbook of Accelerator Physics and Engr., sec 3.2 (Impedances and wakes functions)
+    
+    l = length of strips, angle = azimuthal angle over which each of them is seen,
+    b = pipe radius (or half distance between strips),
+    Zc = characterisitc impedance of transmission lines from strips (usually
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for 2 pair of striplines in symmetric position.
+    '''
+
+    k=2.*np.pi*freq/299792458;
+    
+    Zt=np.zeros((len(freq),2));
+     
+    Zt[:,0] =  8*50 / np.pi**2 / b**2 * 1/k * np.sin(angle)**2 * np.sin(k*lstrip)**2 
+    Zt[:,1] =  8*50 / np.pi**2 / b**2 * 1/k * np.sin(angle)**2 * np.cos(k*l) * np.sin(k*l)
+    
+    return Zt;
+
+
+def transverse_wake_4striplinesBPM_Ng(l,angle,b,z,Zc=50):
+
+    '''compute transverse wake function from Ng formula as quoted in
+    Handbook of Accelerator Physics and Engr., sec 3.2 (Impedances and wakes functions)
+    
+    l = length of strips, angle = azimuthal angle over which each of them is seen,
+    b = pipe radius (or half distance between strips),
+    Zc = characterisitc impedance of transmission lines from strips (usually
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for 2 pairs of striplines in symmetric position.
+
+    TO BE CHECKED
+    '''
+ 
+    c=299792458;
+    
+    Wt=np.zeros((len(z),2));
+    ind=np.where((z-2*l)*z<0)[0];
+    
+    Wt[ind,0] = 8*Zc*c * (np.sin(angle.)/(b*np.pi))**2;
+    
+    return Wt;
+
 
 def longitudinal_imp_striplineBPM_Ng(l,angle,freq,Zc=50):
 
@@ -1155,7 +1222,9 @@ def longitudinal_imp_striplineBPM_Ng(l,angle,freq,Zc=50):
     
     l = length of strips (=electrodes), angle = azimuthal angle over which each of them is seen
     Zc = characterisitc impedance of transmission lines from strips (usually
-    50 Ohm) and freq the frequencies over which to compute impedance'''
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for a pair of striplines in symmetric position.
+    '''
     
     k=2.*np.pi*freq/299792458;
     
@@ -1176,8 +1245,10 @@ def transverse_imp_striplineBPM_Ng(l,angle,b,freq,Zc=50):
     l = length of strips, angle = azimuthal angle over which each of them is seen,
     b = pipe radius (or half distance between strips),
     Zc = characterisitc impedance of transmission lines from strips (usually
-    50 Ohm) and freq the frequencies over which to compute impedance'''
-    
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for a pair of striplines in symmetric position.
+    '''
+
     k=2.*np.pi*freq/299792458;
     
     Zl=longitudinal_imp_striplineBPM_Ng(l,angle,freq,Zc=50);
@@ -1197,8 +1268,10 @@ def transverse_wake_striplineBPM_Ng(l,angle,b,z,Zc=50):
     l = length of strips, angle = azimuthal angle over which each of them is seen,
     b = pipe radius (or half distance between strips),
     Zc = characterisitc impedance of transmission lines from strips (usually
-    50 Ohm) and freq the frequencies over which to compute impedance'''
-    
+    50 Ohm) and freq the frequencies over which to compute impedance
+    NB: only valid for a pair of striplines in symmetric position.
+    '''
+ 
     c=299792458;
     
     Wt=np.zeros((len(z),2));
@@ -2150,7 +2223,7 @@ def imp_model_striplineBPM_Ng(l,angle,b,Zc=50.,beta=1,plane='x',wake_calc=False,
     - Zc = characterisitc impedance of transmission lines from strips (usually
     50 Ohm)
     - fpar / zpar:frequencies / distances over which to compute impedance /wake
-    '''
+    NB: valid only for one pair of striplines  '''
      
     imp_mod=[];wake_mod=[];
     
@@ -2175,6 +2248,45 @@ def imp_model_striplineBPM_Ng(l,angle,b,Zc=50.,beta=1,plane='x',wake_calc=False,
 
     return imp_mod,wake_mod;
 
+def imp_model_4striplinesBPM_Ng(l,angle,b,Zc=50.,beta=1,plane='x',wake_calc=False,
+	fpar=freq_param(ftypescan=0,nflog=100),zpar=z_param()):
+
+    '''compute impedance and wake model from Ng formula as quoted in
+    Handbook of Accelerator Physics and Engr., sec 3.2 (Impedances and wakes functions)
+    (transverse and longitudinal)
+    
+    Note that the longitudinal wake is zero because it's expressed as delta function
+    in Ng's formulas (to be checked).
+    
+    - l = length of strips, angle = azimuthal angle over which each of them is seen,
+    - b = pipe radius (or half distance between strips),
+    - Zc = characterisitc impedance of transmission lines from strips (usually
+    50 Ohm)
+    - fpar / zpar:frequencies / distances over which to compute impedance /wake
+    NB: valid for two pairs of striplines in x/y directions '''
+     
+    imp_mod=[];wake_mod=[];
+    
+    freq=freqscan_from_fpar(fpar);
+    z=zscan_from_zpar(zpar);
+    
+    Zl=longitudinal_imp_4striplinesBPM_Ng(l,angle,freq,Zc=50);
+    imp_mod.append(impedance_wake(a=0,b=0,c=0,d=0,plane='z',var=freq,func=Zl));
+    
+    Zt=transverse_imp_4striplinesBPM_Ng(l,angle,b,freq,Zc=50);
+    if plane=='x':
+	    imp_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=freq,func=Zt));
+    else:
+	    imp_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=freq,func=Zt));
+	    
+    if wake_calc:
+	Wt=transverse_wake_striplinesBPM_Ng(l,angle,b,z,Zc=50);
+	if plane=='x':
+		wake_mod.append(impedance_wake(a=1,b=0,c=0,d=0,plane='x',var=z,func=Wt));
+	else:
+		wake_mod.append(impedance_wake(a=0,b=1,c=0,d=0,plane='y',var=z,func=Wt));
+
+    return imp_mod,wake_mod;
 
 def imp_model_from_file(filename,compname,ignored_rows=0,sign=1):
     '''Create an impedance or wake model from a file containing an impedance
