@@ -1210,7 +1210,7 @@ def transverse_wake_4striplinesBPM_Ng(l,angle,b,z,Zc=50):
     Wt=np.zeros((len(z),2));
     ind=np.where((z-2*l)*z<0)[0];
     
-    Wt[ind,0] = 8*Zc*c * (np.sin(angle.)/(b*np.pi))**2;
+    Wt[ind,0] = 8*Zc*c * (np.sin(angle)/(b*np.pi))**2;
     
     return Wt;
 
