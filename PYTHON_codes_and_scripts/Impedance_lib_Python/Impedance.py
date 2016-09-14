@@ -1185,7 +1185,7 @@ def transverse_imp_4striplinesBPM_Ng(l,angle,b,freq,Zc=50):
     
     Zt=np.zeros((len(freq),2));
      
-    Zt[:,0] =  8*50 / np.pi**2 / b**2 * 1/k * np.sin(angle)**2 * np.sin(k*lstrip)**2 
+    Zt[:,0] =  8*50 / np.pi**2 / b**2 * 1/k * np.sin(angle)**2 * np.sin(k*l)**2 
     Zt[:,1] =  8*50 / np.pi**2 / b**2 * 1/k * np.sin(angle)**2 * np.cos(k*l) * np.sin(k*l)
     
     return Zt;
