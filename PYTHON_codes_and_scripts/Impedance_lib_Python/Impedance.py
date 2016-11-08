@@ -64,7 +64,14 @@ def carbon_layer(rhoDC=10e-6,thickness=25e-3):
     see N. Mounet PhD thesis for references.'''
     
     return layer(rhoDC=rhoDC,tau=4.2e-12*5e-6/rhoDC,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+
+def 3Dcarbon_layer(rhoDC=10e-6,thickness=25e-3):
+    '''define a layer of 3D carbon material, with user-defined resistivity
+    relaxation time is changed accordingly (using parameters of CFC or graphite), proportionally to conductivity
+    see N. Mounet PhD thesis for references.'''
     
+    return layer(rhoDC=rhoDC,tau=0,epsb=1,mur=1,fmu=np.inf,thickness=thickness);
+   
 def aC_layer(thickness=0.5e-6):
     '''define a layer of amorphous carbon material,
     relaxation time is changed accordingly (using parameters of CFC or graphite), proportionally to conductivity
