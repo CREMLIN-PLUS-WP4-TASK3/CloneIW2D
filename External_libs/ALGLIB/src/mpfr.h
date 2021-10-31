@@ -449,8 +449,6 @@ __MPFR_DECLSPEC int mpfr_sin _MPFR_PROTO ((mpfr_ptr, mpfr_srcptr, mpfr_rnd_t));
 __MPFR_DECLSPEC int mpfr_sin_cos _MPFR_PROTO ((mpfr_ptr, mpfr_ptr, mpfr_srcptr, mpfr_rnd_t));
 __MPFR_DECLSPEC int mpfr_cos _MPFR_PROTO ((mpfr_ptr, mpfr_srcptr, mpfr_rnd_t));
 __MPFR_DECLSPEC int mpfr_tan _MPFR_PROTO ((mpfr_ptr, mpfr_srcptr, mpfr_rnd_t));
-__MPFR_DECLSPEC int mpfr_atan2 _MPFR_PROTO ((mpfr_ptr,mpfr_srcptr,mpfr_srcptr,
-                                             mpfr_rnd_t));
 
 __MPFR_DECLSPEC int mpfr_hypot _MPFR_PROTO ((mpfr_ptr, mpfr_srcptr, mpfr_srcptr, mpfr_rnd_t));
 __MPFR_DECLSPEC int mpfr_erf _MPFR_PROTO ((mpfr_ptr, mpfr_srcptr, mpfr_rnd_t));

@@ -1,56 +1,47 @@
-.SUFFIXES: .cc
+CC:=g++
+CCFLAGS:=-O2 -fPIC
+CCFLAGS+=-Wall -Wextra -pedantic
+OUTDIR:=build
+BINDIR:=bin
+SRCDIR:=.
+INCLUDE=-I$(SRCDIR)
+INCLUDE+=-I../External_libs/ALGLIB/include
+LCFLAGS:=-L../External_libs/ALGLIB/
+LCFLAGS+=-lalg -lmpfr -lgmp -lm -lgsl
+BINNAMES:=roundchamber wake_roundchamber flatchamber wake_flatchamber
+LIBNAME:=libIW2D
 
-CC = /usr/bin/gcc
+define compilebin=
+	$(CC) -static $(CCFLAGS) $(INCLUDE) $^ -Wl,-Bstatic $(LCFLAGS) -o $@
+endef
 
-PATH_ALGLIB = /home/nick/HDD/Work/GNU/ALGLIB/mpfr/out
-PATH_GMP = /home/nick/HDD/Work/GNU/gmp-6.0.0
-PATH_MPFR = /home/nick/HDD/Work/GNU/mpfr-3.1.2/src
+static: $(OUTDIR) $(BINDIR) $(BINDIR)/round $(BINDIR)/wakeround $(BINDIR)/flat \
+	$(BINDIR)/wakeflat $(BINDIR)/$(LIBNAME).so
 
-PATH_GMP_LIB = $(PATH_GMP)/.libs
-PATH_GMP_INC = $(PATH_GMP)
+$(OUTDIR)/%.o: $(SRCDIR)/%.cc
+	$(CC) $(CCFLAGS) -c $(INCLUDE) $^ -o $@
 
-PATH_MPFR_LIB = $(PATH_MPFR)/.libs
-PATH_MPFR_INC = $(PATH_MPFR)
+$(OUTDIR):
+	mkdir -p $(OUTDIR)
 
-OPTS = -O2 -I$(PATH_ALGLIB) -L$(PATH_ALGLIB)
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
-LIBOPTS = -L$(PATH_GMP_LIB) -L$(PATH_MPFR_LIB) -L$(PATH_ALGLIB) -lmpalglib -lmpfr -lgmp -lm -lstdc++ -lgsl -lgslcblas 
-INCOPTS = -I$(PATH_GMP_INC) -I$(PATH_MPFR_INC) -I$(PATH_ALGLIB)
+$(BINDIR)/round: $(OUTDIR)/roundchamber.o
+	$(compilebin)
 
-LOPTS = 
+$(BINDIR)/wakeround: $(OUTDIR)/wake_roundchamber.o
+	$(compilebin)
 
+$(BINDIR)/flat: $(OUTDIR)/flatchamber.o
+	$(compilebin)
 
+$(BINDIR)/wakeflat: $(OUTDIR)/wake_flatchamber.o
+	$(compilebin)
 
-# -Wall -> warning all
+$(BINDIR)/$(LIBNAME).so: $(OUTDIR)/wake_roundchamber.o
+	$(CC) -shared $(CCFLAGS) $(INCLUDE) $^ -Wl,-Bdynamic $(LCFLAGS) -o $@
 
-all: round wakeround flat wakeflat lib Makefile
-
-roundchamber.o: roundchamber.cc
-	$(CC) $(LOPTS) -fPIC -o roundchamber.o -c roundchamber.cc $(INCOPTS)
-
-round: roundchamber.o
-	$(CC) $(LOPTS) -o roundchamber.x roundchamber.o -O2 $(LIBOPTS)
-
-wake_roundchamber.o: wake_roundchamber.cc
-	$(CC) $(LOPTS) -fPIC -o wake_roundchamber.o -c wake_roundchamber.cc $(INCOPTS)
-
-wakeround: wake_roundchamber.o
-	$(CC) $(LOPTS) -o wake_roundchamber.x wake_roundchamber.o -O2 $(LIBOPTS)
-
-flatchamber.o: flatchamber.cc
-	$(CC) $(LOPTS) -fPIC -o flatchamber.o -c flatchamber.cc $(INCOPTS)
-
-flat: flatchamber.o
-	$(CC) $(LOPTS) -o flatchamber.x flatchamber.o -O2 $(LIBOPTS)
-
-wake_flatchamber.o: wake_flatchamber.cc
-	$(CC) $(LOPTS) -fPIC -o wake_flatchamber.o -c wake_flatchamber.cc $(INCOPTS)
-
-wakeflat: wake_flatchamber.o
-	$(CC) $(LOPTS) -o wake_flatchamber.x wake_flatchamber.o -O2 $(LIBOPTS)
-
+.PHONY: clean
 clean:
-	rm -f *.o libIW2D.so *.x
-
-lib: wake_roundchamber.o
-	$(CC) ${LOPTS} -shared -o libIW2D.so wake_roundchamber.o -O2 $(LIBOPTS) 
+	rm -rf $(OUTDIR) $(BINDIR)

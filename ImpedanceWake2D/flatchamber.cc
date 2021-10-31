@@ -1,11 +1,11 @@
 /*
- *  flatchamber.cc 
- *  
+ *  flatchamber.cc
+ *
  *  by Nicolas Mounet (Nicolas.Mounet@cern.ch)
  *
- *  computes the impedance in a flat chamber (see CERN note by N. Mounet and E. Metral, 
+ *  computes the impedance in a flat chamber (see CERN note by N. Mounet and E. Metral,
  "Electromagnetic fields and beam coupling impedances in a multilayer flat chamber", 2010)
- 
+
 In input : typical input file is
 
 Machine:	LHC
@@ -90,24 +90,24 @@ INPUT PARAMETERS
   M - matrix size, M>0
   N - matrix size, N>0
   K - matrix size, K>0
-  Alpha - coefficient 
-  A - matrix 
-  IA - submatrix offset 
-  JA - submatrix offset 
-  OpTypeA - transformation type: * 0 - no transformation * 1 - transposition * 2 - conjugate transposition 
-  B - matrix 
-  IB - submatrix offset 
-  JB - submatrix offset 
-  OpTypeB - transformation type: * 0 - no transformation * 1 - transposition * 2 - conjugate transposition 
-  Beta - coefficient 
-  C - matrix 
-  IC - submatrix offset 
-  JC - submatrix offset 
+  Alpha - coefficient
+  A - matrix
+  IA - submatrix offset
+  JA - submatrix offset
+  OpTypeA - transformation type: * 0 - no transformation * 1 - transposition * 2 - conjugate transposition
+  B - matrix
+  IB - submatrix offset
+  JB - submatrix offset
+  OpTypeB - transformation type: * 0 - no transformation * 1 - transposition * 2 - conjugate transposition
+  Beta - coefficient
+  C - matrix
+  IC - submatrix offset
+  JC - submatrix offset
 
-template<unsigned int Precision> void cmatrixgemm(int m, int n, int k, 
+template<unsigned int Precision> void cmatrixgemm(int m, int n, int k,
 	amp::campf<Precision> alpha, const ap::template_2d_array< amp::campf<Precision> >& a,
-	int ia, int ja, int optypea, const ap::template_2d_array< amp::campf<Precision> >& b, 
-	int ib, int jb, int optypeb, amp::campf<Precision> beta, 
+	int ia, int ja, int optypea, const ap::template_2d_array< amp::campf<Precision> >& b,
+	int ib, int jb, int optypeb, amp::campf<Precision> beta,
 	ap::template_2d_array< amp::campf<Precision> >& c, int ic, int jc);
 */
 
@@ -148,8 +148,8 @@ unsigned long mem; // current number of elements of kxmem, eta1mem, etc.
 
 
 //using std::complex;
-  
-  
+
+
 /******************************************************************************
  *** locate: search a table ordered in ascending order		    ***
  ***		      (inspired from Numerical Recipes) 		    ***
@@ -158,7 +158,7 @@ unsigned long mem; // current number of elements of kxmem, eta1mem, etc.
  *** Parameters     : table, z, n (table is indexed from 0 to n)            ***
  ******************************************************************************/
 
-unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table, 
+unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 	amp::ampf<Precision> z, unsigned long n)
 
 { unsigned long il, iu, im, lprov;
@@ -173,9 +173,9 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
      iu=im;
    }
  if (z==table(0)) lprov=0;
- else if (z==table(n)) lprov=n; 
- else if (z<table(0)) lprov=0; 
- else if (z>table(n)) lprov=n+1; 
+ else if (z==table(n)) lprov=n;
+ else if (z<table(0)) lprov=0;
+ else if (z>table(n)) lprov=n+1;
  else lprov=iu;
 
  return lprov;
@@ -188,23 +188,23 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   amp::campf<Precision> csqrt(amp::campf<Precision> z){
-  
+
     /* Complex square root of z in multiprecision. Convention specified in CERN note mentioned at the
     beginning. */
-  
+
     amp::campf<Precision> result;
     amp::ampf<Precision> rho,phi;
-    
+
     rho=amp::sqrt(amp::abscomplex(z));
     phi=amp::atan2(z.y,z.x)/2;
-    
+
     result.x=rho*amp::cos(phi);
     result.y=rho*amp::sin(phi);
-    
+
     return result;
-  
+
   }
-  
+
 
 /**************************************************
 *** cexp: Complex exponential in multiprecision
@@ -212,23 +212,23 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   amp::campf<Precision> cexp(amp::campf<Precision> z){
-  
+
     /* Complex exponential of z in multiprecision. */
-  
+
     amp::campf<Precision> result;
     amp::ampf<Precision> rho,phi;
-    
+
     rho=amp::exp(z.x);
     phi=z.y;
-    
+
     result.x=rho*amp::cos(phi);
     result.y=rho*amp::sin(phi);
-    
+
     return result;
-  
+
   }
-  
-  
+
+
 /**************************************************
 *** multilayerm: computes matrix for field matching (multiprecision)
 ***
@@ -237,54 +237,54 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
   void multilayerm(ap::template_2d_array< amp::campf<Precision> >& m,
   	amp::campf<Precision>& kyn,
   	unsigned int N,
-	ap::template_1d_array< amp::campf<Precision> >& eps1, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2, 
-	ap::template_1d_array< amp::campf<Precision> >& eps1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio, 
+	ap::template_1d_array< amp::campf<Precision> >& eps1,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2,
+	ap::template_1d_array< amp::campf<Precision> >& eps1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio,
 	ap::template_1d_array< amp::ampf<Precision> >& b,
 	amp::ampf<Precision> kx, amp::ampf<Precision> beta){
-	
+
     /* computes the matrix M for the multilayer field matching, from mu1, eps1, b of each of the N layers
     and the horizontal wave number kx, angular frequency omega, relativistic velocity factor beta
     and wave number k.
     It also gives in output kyn, which is ky for the last layer. */
 
     // NB: eps1, eps1m, mu1 and mu1m are actually the inverse of the 'real' eps1, etc.
-    
+
     amp::campf<Precision> kyp,kyp1,exp1,exp2,exp3,exp4;
     amp::campf<Precision> tmp1,tmp2,tmpplus,tmpminus,fac,fac2;
     amp::ampf<Precision> kx2,fac3;
     ap::template_2d_array< amp::campf<Precision> > mp1p;
     ap::template_2d_array< amp::campf<Precision> > mold;
-   
+
     mp1p.setbounds(1,4,1,4);
     mold.setbounds(1,4,1,4);
-  
+
     for (int i=1; i<=4; i++) {
       for (int j=1; j<=4; j++) {
         if (i==j) mold(i,j)=1;
 	else mold(i,j)=0;
       }
     }
-    
+
     m=mold;
 
     kx2=amp::sqr(kx);
     kyp=csqrt(kx2+nu2(1));
     fac3=kx/(2*beta);
-    
+
     for (unsigned int p=1; p<=N-1; p++) {
 
       kyp1=csqrt(kx2+nu2(p+1));
-      
+
       tmp1=kyp*nu2ratio(p)/kyp1;
       exp1=cexp((kyp-kyp1)*b(p));
       exp2=cexp(-(kyp+kyp1)*b(p));
       exp3=1/exp2;
       exp4=1/exp1;
-      
+
       tmp2=tmp1*eps1ratio(p);
       tmpplus=(1+tmp2)/2;
       tmpminus=(1-tmp2)/2;
@@ -292,14 +292,14 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
       mp1p(1,2)=tmpminus*exp2;
       mp1p(2,1)=tmpminus*exp3;
       mp1p(2,2)=tmpplus*exp4;
-     
+
       fac=fac3*(nu2ratio(p)-1)/kyp1;
       fac2=fac*eps1(p+1);
       mp1p(1,3)=-fac2*exp1;
       mp1p(1,4)=-fac2*exp2;
       mp1p(2,3)=fac2*exp3;
       mp1p(2,4)=fac2*exp4;
-      
+
       tmp2=tmp1*mu1ratio(p);
       tmpplus=(1+tmp2)/2;
       tmpminus=(1-tmp2)/2;
@@ -307,25 +307,25 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
       mp1p(3,4)=tmpminus*exp2;
       mp1p(4,3)=tmpminus*exp3;
       mp1p(4,4)=tmpplus*exp4;
-     
+
       fac2=fac*mu1(p+1);
       mp1p(3,1)=-fac2*exp1;
       mp1p(3,2)=-fac2*exp2;
       mp1p(4,1)=fac2*exp3;
       mp1p(4,2)=fac2*exp4;
-      
+
       ablas::cmatrixgemm<Precision>(4,4,4,1,mp1p,1,1,0,mold,1,1,0,0,m,1,1);
-      
+
       kyp=kyp1;
       mold=m;
     }
-    
+
     kyn=kyp1;
-  
+
     return;
   }
-  
-  
+
+
 /**************************************************
 *** matinv4: computes the 2 first lines of coefficients
 *** of the inverse of a 4x4 matrix (multiprecision).
@@ -333,18 +333,18 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   void matinv4(ap::template_2d_array< amp::campf<Precision> >& mat) {
-  
+
     /* input= matrix mat (bounds 0..3,0..3). output is also mat, with the first two lines
        filled with the coefficients of its inverse */
-    
+
     // We need the two first columns of the cofactor matrix, and the total determinant
     ap::template_2d_array< amp::campf<Precision> > cof; // cofactor matrix (two first columns only)
     ap::template_1d_array< amp::campf<Precision> > det2; // array with the 2x2 determinants of the 2 last columns
     amp::campf<Precision> det4; //determinant of the initial 4x4 matrix mat
-    
+
     cof.setbounds(0,3,0,1);
     det2.setbounds(0,5);
-    
+
     // det2 is ordered from top to bottom
     det2(0)=mat(0,2)*mat(1,3)-mat(0,3)*mat(1,2);
     det2(1)=mat(0,2)*mat(2,3)-mat(0,3)*mat(2,2);
@@ -352,22 +352,22 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     det2(3)=mat(1,2)*mat(2,3)-mat(1,3)*mat(2,2);
     det2(4)=mat(1,2)*mat(3,3)-mat(1,3)*mat(3,2);
     det2(5)=mat(2,2)*mat(3,3)-mat(2,3)*mat(3,2);
-    
+
     // cofactors of the first column
     cof(0,0)=  mat(1,1)*det2(5)-mat(2,1)*det2(4)+mat(3,1)*det2(3);
     cof(1,0)=-(mat(0,1)*det2(5)-mat(2,1)*det2(2)+mat(3,1)*det2(1));
     cof(2,0)=  mat(0,1)*det2(4)-mat(1,1)*det2(2)+mat(3,1)*det2(0);
     cof(3,0)=-(mat(0,1)*det2(3)-mat(1,1)*det2(1)+mat(2,1)*det2(0));
-    
+
     // total determinant
     det4=mat(0,0)*cof(0,0)+mat(1,0)*cof(1,0)+mat(2,0)*cof(2,0)+mat(3,0)*cof(3,0);
-    
+
     // cofactors of the second column
     cof(0,1)=-(mat(1,0)*det2(5)-mat(2,0)*det2(4)+mat(3,0)*det2(3));
     cof(1,1)=  mat(0,0)*det2(5)-mat(2,0)*det2(2)+mat(3,0)*det2(1);
     cof(2,1)=-(mat(0,0)*det2(4)-mat(1,0)*det2(2)+mat(3,0)*det2(0));
     cof(3,1)=  mat(0,0)*det2(3)-mat(1,0)*det2(1)+mat(2,0)*det2(0);
-    
+
     // final coefficients sought for (we transpose the cofactors and divide by determinant)
     mat(0,0)=cof(0,0)/det4;
     mat(0,1)=cof(1,0)/det4;
@@ -377,10 +377,10 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     mat(1,1)=cof(1,1)/det4;
     mat(1,2)=cof(2,1)/det4;
     mat(1,3)=cof(3,1)/det4;
-    
-    
+
+
   }
-  
+
 /**************************************************
 *** etachi: computes eta1, eta2, chi1 and chi2 (multiprecision)
 ***
@@ -391,26 +391,26 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
   	amp::campf<Precision>& eta1,
   	amp::campf<Precision>& eta2,
   	unsigned int N, unsigned int M,
-	ap::template_1d_array< amp::campf<Precision> >& eps1, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2, 
-	ap::template_1d_array< amp::campf<Precision> >& eps1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio, 
+	ap::template_1d_array< amp::campf<Precision> >& eps1,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2,
+	ap::template_1d_array< amp::campf<Precision> >& eps1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio,
 	ap::template_1d_array< amp::ampf<Precision> >& b,
-	ap::template_1d_array< amp::campf<Precision> >& eps1m, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1m, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2m, 
-	ap::template_1d_array< amp::campf<Precision> >& eps1mratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1mratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2mratio, 
+	ap::template_1d_array< amp::campf<Precision> >& eps1m,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1m,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2m,
+	ap::template_1d_array< amp::campf<Precision> >& eps1mratio,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1mratio,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2mratio,
 	ap::template_1d_array< amp::ampf<Precision> >& bm,
 	amp::ampf<Precision> kx, amp::ampf<Precision> beta){
-	
-    /* function that computes chi1, chi2, eta1 and eta2 for a given horizontal wave number kx, from mu1, eps1, b 
-    of each of the N upper layers and mu1m, eps1m, bm of each of the M lower layers, 
+
+    /* function that computes chi1, chi2, eta1 and eta2 for a given horizontal wave number kx, from mu1, eps1, b
+    of each of the N upper layers and mu1m, eps1m, bm of each of the M lower layers,
     and from the angular frequency omega, relativistic velocity factor beta and wave number k. */
-    
+
     // NB: eps1, eps1m, mu1 and mu1m are actually the inverse of the 'real' eps1, etc.
 
     ap::template_2d_array< amp::campf<Precision> > mat,matprime; // 4*4 field matching matrices for upper and lower layers
@@ -426,7 +426,7 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     // try to find kx in the table kxmem
     if (mem==0) lprov=0;
     else lprov=locate(kxmem,kx,mem-1);
- 
+
     if ( (mem!=0)&&(kx==kxmem(lprov)) ) {
       eta1=eta1mem(lprov);eta2=eta2mem(lprov);
       chi1=chi1mem(lprov);chi2=chi2mem(lprov);
@@ -496,7 +496,7 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
       printf("chi2 : %s %s\n", chi2.x.toDec().c_str(),chi2.y.toDec().c_str());
       printf("eta1 : %s %s\n", eta1.x.toDec().c_str(),eta1.y.toDec().c_str());
       printf("eta2 : %s %s\n", eta2.x.toDec().c_str(),eta2.y.toDec().c_str());*/
-     
+
      for(unsigned int k=mem; k>=lprov+1; k--) {
        kxmem(k)=kxmem(k-1);
        eta1mem(k)=eta1mem(k-1);eta2mem(k)=eta2mem(k-1);
@@ -506,13 +506,13 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
      eta1mem(lprov)=eta1;eta2mem(lprov)=eta2;
      chi1mem(lprov)=chi1;chi2mem(lprov)=chi2;
      mem++;
-       
+
     }
 
     return;
-    
+
   }
-  
+
 /**************************************************
 *** integrand: computes the complex integrand in u (std precision)
 ***
@@ -520,30 +520,30 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 
   std::complex<double> integrand(unsigned int m, unsigned int n,
   	unsigned int N, unsigned int M,
-	ap::template_1d_array< amp::campf<Precision> >& eps1, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2, 
-	ap::template_1d_array< amp::campf<Precision> >& eps1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio, 
+	ap::template_1d_array< amp::campf<Precision> >& eps1,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2,
+	ap::template_1d_array< amp::campf<Precision> >& eps1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1ratio,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2ratio,
 	ap::template_1d_array< amp::ampf<Precision> >& b,
-	ap::template_1d_array< amp::campf<Precision> >& eps1m, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1m, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2m, 
-	ap::template_1d_array< amp::campf<Precision> >& eps1mratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& mu1mratio, 
-  	ap::template_1d_array< amp::campf<Precision> >& nu2mratio, 
+	ap::template_1d_array< amp::campf<Precision> >& eps1m,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1m,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2m,
+	ap::template_1d_array< amp::campf<Precision> >& eps1mratio,
+  	ap::template_1d_array< amp::campf<Precision> >& mu1mratio,
+  	ap::template_1d_array< amp::campf<Precision> >& nu2mratio,
 	ap::template_1d_array< amp::ampf<Precision> >& bm,
 	amp::ampf<Precision> u, amp::ampf<Precision> beta,
 	amp::ampf<Precision> kovergamma){
-	
-    /* function that computes the integrand in alphamn for a given u (kx=k sinh(u)/gamma) 
-    and given azimuthal mode numbers m and n, from mu1, eps1, b 
-    of each of the N upper layers and mu1m, eps1m, bm of each of the M lower layers, 
+
+    /* function that computes the integrand in alphamn for a given u (kx=k sinh(u)/gamma)
+    and given azimuthal mode numbers m and n, from mu1, eps1, b
+    of each of the N upper layers and mu1m, eps1m, bm of each of the M lower layers,
     and from the angular frequency omega, relativistic velocity factor beta, wave number k and k/gamma. */
-    
+
     // NB: eps1, eps1m, mu1 and mu1m are actually the inverse of the 'real' eps1, etc.
-    
+
     amp::campf<Precision> chi1,chi2,eta1,eta2; // chi and eta functions of kx
     amp::ampf<Precision> kx;
     amp::campf<Precision> inte; // result in multiprecision
@@ -555,18 +555,18 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     else m1powm=-1;
     if (n % 2 ==0) m1pown=1;
     else m1pown=-1;
-    
+
     m1powmn=m1powm*m1pown;
-    
+
     // computes kx
     kx=kovergamma*amp::sinh(u);
-    
+
     // computes eta and chi functions at kx
     etachi(chi1, chi2, eta1, eta2, N, M, eps1, mu1, nu2, eps1ratio, mu1ratio, nu2ratio, b, eps1m, mu1m, nu2m, eps1mratio, mu1mratio, nu2mratio, bm, kx, beta);
-    
+
     // computes integrand
     inte=amp::cosh(m*u)*amp::cosh(n*u)*( chi1+m1powm*eta1+m1pown*chi2+m1powmn*eta2 );
-    
+
     // check if real or imaginary part of inte is NaN. In that case, replace it by zero.
     x=double(amp::ampf<Precision>(inte.x).toDouble());
     y=double(amp::ampf<Precision>(inte.y).toDouble());
@@ -576,19 +576,19 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     result=std::complex<double>(x,y);
     //printf("%13.8e %13.8e %13.8e\n",double(amp::ampf<Precision>(u).toDouble()),x,y);
     return result;
-    
+
   }
-  
+
 /**************************************************
 *** integrand_real: computes the real part of the integrand in u (std precision)
 ***
 ***************************************************/
 
   double integrand_real(double x, void *p){
-	
-    /* function encapsulating the computation of the real part of the integrand of alphamn, 
+
+    /* function encapsulating the computation of the real part of the integrand of alphamn,
     for gsl integration, see also function integrand */
-    
+
     struct params *param=(struct params *)p;
     unsigned int N,M; // number of upper and lower layers
     unsigned int m,n; // indices of alphamn (azimuthal mode numbers)
@@ -618,13 +618,13 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     bm=(param->bm);
     beta=(param->beta);
     kovergamma=(param->kovergamma);
-    
+
     u=x;
 
     inte=integrand(m, n, N, M, eps1, mu1, nu2, eps1ratio, mu1ratio, nu2ratio, b, eps1m, mu1m, nu2m, eps1mratio, mu1mratio, nu2mratio, bm, u, beta, kovergamma);
 
     return inte.real();
-    
+
   }
 
 /**************************************************
@@ -633,10 +633,10 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   double integrand_imag(double x, void *p){
-	
-    /* function encapsulating the computation of the imaginary part of the integrand of alphamn, 
+
+    /* function encapsulating the computation of the imaginary part of the integrand of alphamn,
     for gsl integration, see also function integrand */
-    
+
     struct params *param=(struct params *)p;
     unsigned int N,M; // number of upper and lower layers
     unsigned int m,n; // indices of alphamn (azimuthal mode numbers)
@@ -666,14 +666,14 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     bm=(param->bm);
     beta=(param->beta);
     kovergamma=(param->kovergamma);
-    
-    
+
+
     u=x;
 
     inte=integrand(m, n, N, M, eps1, mu1, nu2, eps1ratio, mu1ratio, nu2ratio, b, eps1m, mu1m, nu2m, eps1mratio, mu1mratio, nu2mratio, bm, u, beta, kovergamma);
 
     return inte.imag();
-    
+
   }
 
 
@@ -683,10 +683,10 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   double integrand_real_modif(double t, void *p){
-	
-    /* function encapsulating the computation of the real part of the integrand of alphamn, 
+
+    /* function encapsulating the computation of the real part of the integrand of alphamn,
     for gsl integration, see also function integrand */
-    
+
     struct params *param=(struct params *)p;
     unsigned int N,M; // number of upper and lower layers
     unsigned int m,n; // indices of alphamn (azimuthal mode numbers)
@@ -716,8 +716,8 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     bm=(param->bm);
     beta=(param->beta);
     kovergamma=(param->kovergamma);
-    
-    
+
+
     if (t==0) u=1.e4; // integrand should be very close to zero anyway
     else u=(1.-t)/t;
 
@@ -726,7 +726,7 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     if ((t==0)&&(std::abs(inte)>1.e-10)) printf ("Warning: approx for t=0 too rough, %13.8e\n", std::abs(inte));
 
     return inte.real()/(t*t);
-    
+
   }
 
 
@@ -736,10 +736,10 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   double integrand_imag_modif(double t, void *p){
-	
-    /* function encapsulating the computation of the real part of the integrand of alphamn, 
+
+    /* function encapsulating the computation of the real part of the integrand of alphamn,
     for gsl integration, see also function integrand */
-    
+
     struct params *param=(struct params *)p;
     unsigned int N,M; // number of upper and lower layers
     unsigned int m,n; // indices of alphamn (azimuthal mode numbers)
@@ -769,17 +769,17 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     bm=(param->bm);
     beta=(param->beta);
     kovergamma=(param->kovergamma);
-    
-    
+
+
     if (t==0) u=1.e4; // integrand should be very close to zero anyway
     else u=(1.-t)/t;
 
     inte=integrand(m, n, N, M, eps1, mu1, nu2, eps1ratio, mu1ratio, nu2ratio, b, eps1m, mu1m, nu2m, eps1mratio, mu1mratio, nu2mratio, bm, u, beta, kovergamma);
-    
+
     if ((t==0)&&(std::abs(inte)>1.e-10)) printf ("Warning: approx for t=0 too rough, %13.8e\n", std::abs(inte));
 
     return inte.imag()/(t*t);
-    
+
   }
 
 
@@ -788,23 +788,23 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 *** of integrand_real or integrand_imag
 ***************************************************/
 
-  double integrate(int flagreal, unsigned int M, unsigned int N, 
-  	ap::template_1d_array< amp::ampf<Precision> > b, 
-	ap::template_1d_array< amp::ampf<Precision> > bm, 
+  double integrate(int flagreal, unsigned int M, unsigned int N,
+  	ap::template_1d_array< amp::ampf<Precision> > b,
+	ap::template_1d_array< amp::ampf<Precision> > bm,
 	amp::ampf<Precision> beta, ap::template_1d_array< amp::campf<Precision> > eps1,
 	ap::template_1d_array< amp::campf<Precision> > eps1m,
 	ap::template_1d_array< amp::campf<Precision> > mu1,
 	ap::template_1d_array< amp::campf<Precision> > mu1m,
 	amp::ampf<Precision> omega, amp::ampf<Precision> k, amp::ampf<Precision> kovergamma,
 	unsigned int m, unsigned int n, double tolintabs, size_t limit, gsl_integration_workspace *w){
-	
+
     /* In input: flagreal : 1 to integrate integrand_real, otherwise integrate integrand_imag
-       The final m and n are the azimuthal mode numbers (e.g. m=0, n=0 will give alpha_00 ), 
+       The final m and n are the azimuthal mode numbers (e.g. m=0, n=0 will give alpha_00 ),
        and tolintabs is the absolute error permitted
        The rest are the parameters of the multilayer computation (see etachi and integrand
        functions)*/
 
-    
+
     struct params param; // input parameters for the integrand functions
     ap::template_1d_array< amp::campf<Precision> > eps1ratio,eps1mratio,mu1ratio,mu1mratio,nu2,nu2m,nu2ratio,nu2mratio;
     amp::ampf<Precision> beta2,k2;
@@ -812,9 +812,9 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     double tolint=1.e-6; // relative error permitted for gsl adaptative integration
     double x,err; // result and error
     int status;
-   
+
     if ((m==0)&&(n==0)) tolint*=1e-2; // higher precision for alpha00
- 
+
     // precompute various ratio
     eps1ratio.setbounds(1,N);mu1ratio.setbounds(1,N);nu2.setbounds(1,N+1);nu2ratio.setbounds(1,N);
     eps1mratio.setbounds(1,M);mu1mratio.setbounds(1,M);nu2m.setbounds(1,M+1);nu2mratio.setbounds(1,M);
@@ -844,8 +844,8 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     }
     eps1m(M+1)=1/eps1m(M+1);
     mu1m(M+1)=1/mu1m(M+1);
-    
-        
+
+
     // parameters
     param.M=M+1;
     param.N=N+1;
@@ -904,8 +904,8 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
       else {
         printf("Warning: alpha%d%d, omega= %s, flagreal= %d, result= %13.8e, rel. error= %13.8e\n",m,n,omega.toDec().c_str(),flagreal,x,std::abs(err/x));
       }
-    } 
-    
+    }
+
     /*if (std::abs(x)<tolintabs) {
       status=gsl_integration_qagiu(&F, 0, std::abs(x), tolint, limit, w, &x, &err);
       if (status) {
@@ -914,7 +914,7 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
     }*/
 
     return x;
-     
+
   }
 
 
@@ -923,49 +923,49 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***
 ***************************************************/
 
-  void read_input(std::string line, std::string description, unsigned int& param0, double& param1, 
+  void read_input(std::string line, std::string description, unsigned int& param0, double& param1,
   	std::string& param2, amp::ampf<Precision>& param3, int type){
-	
+
     /* function reading the number or string at the end of an input line, identifying the description string.
     type=0 if output is an unsigned int, 1 if output is a double, 2 if output is a char array, and 3 if output is an
     amp high precision number.
     Output is in "param[type_number]". */
-    
+
     size_t found;
 
     if (line.find(description) != std::string::npos){
       found=line.find("\t");
 
       if (found != std::string::npos){
-         
+
         switch(type){
-	  
+
 	  case 0:
-    
+
 	    param0=atoi(line.substr(found+1,std::string::npos).c_str());
 	    break;
-	    
+
 	  case 1:
-	  
+
 	    param1=strtod(line.substr(found+1,std::string::npos).c_str(),NULL);
 	    break;
-	    
+
 	  case 2:
-	  
+
 	    param2=line.substr(found+1,std::string::npos);
 	    break;
-	    
+
 	  case 3:
-	  
+
 	    param3=line.substr(found+1,std::string::npos).c_str();
 	    break;
-	
+
 	}
 
       }
 
     }
-    
+
     return;
 
   }
@@ -976,24 +976,24 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 ***************************************************/
 
   void read_input_layer(std::string line, std::string description, int p, amp::ampf<Precision>& param){
-	
+
     /* function reading the number or string at the end of an input line for a line containing a property of layer p.
     Output is an amp high precision number, in param. */
-    
+
     unsigned int dummy0;
     double dummy1;
     std::string dummy2;
-    
-    std::ostringstream des;  
+
+    std::ostringstream des;
     des << "Layer " << p << " " << description;
     //std::cout << des.str() << "\n";
     //std::cout << line << "\n";
     read_input(line,des.str(),dummy0,dummy1,dummy2,param,3);
-    
+
     return;
-    
+
   }
-    
+
 
 /**************************************************
  *** 			main program		***
@@ -1003,7 +1003,7 @@ unsigned long locate (ap::template_1d_array< amp::ampf<Precision> >& table,
 main ()
 
 {
- 
+
  char *endline;
  char output[MAXCHARFILE],Zxdipoutput[MAXCHARFILE+10],Zydipoutput[MAXCHARFILE+10],Zlongoutput[MAXCHARFILE+10];
  char Zxquadoutput[MAXCHARFILE+10],Zyquadoutput[MAXCHARFILE+10],Zycstoutput[MAXCHARFILE+10],Input[MAXCHARFILE+10];
@@ -1017,7 +1017,7 @@ main ()
  		number of freq. per decade, number of freq. in a lin. scan inside the log scan*/
  ap::template_1d_array< amp::campf<Precision> > eps1,eps1m,mu1,mu1m; /* eps1 and mu1 for upper (without m at
  					the end) and lower layers (with m at the end) */
- ap::template_1d_array< amp::ampf<Precision> > b,bm,thick,thickm; // position of upper and lower boundaries; thickness of the layers 
+ ap::template_1d_array< amp::ampf<Precision> > b,bm,thick,thickm; // position of upper and lower boundaries; thickness of the layers
  ap::template_1d_array< amp::ampf<Precision> > rho,tau,epsb,chi,fmu,rhom,taum,epsbm,chim,fmum; /* layers
  						properties (DC resistivity, resistivity relaxation time,
 						dielectric constant, magnetic susceptibility=mu_r-1,
@@ -1034,10 +1034,10 @@ main ()
  std::complex<double> tolintabs00,tolintabs01,tolintabs02,tolintabs11;
  size_t found;
  time_t start,end; // times
-					
+
  // start time
  time(&start);
- 
+
  // memory of etas and chis allocation
  kxmem.setbounds(0,MAXMEM);
  eta1mem.setbounds(0,MAXMEM);eta2mem.setbounds(0,MAXMEM);
@@ -1050,14 +1050,14 @@ main ()
  Z0=mu0*C;
  jimagMP.x=0;jimagMP.y=1;
  jimag=std::complex<double>(0.,1.);
- 
+
  // default values of the parameters (in case)
  flag_topbotsym=1;
  typescan=0;
  fminlog=2;fmaxlog=13;nflog=10;n_added=0;
  fsamplin=8;fminlin=1;fmaxlin=2;nflin=100;nf=0;
  N=2;M=2;L=1.;gamma="479.6";
- 
+
  // read input file
  // first read everything to identify the strings in front of each parameters
  n_input=0;
@@ -1107,7 +1107,7 @@ main ()
  // flag for top bottom symmetry (1 if there is such a symmetry)
  flag_topbotsym= ((strcmp(topbot.c_str(),"yes")==0 || strcmp(topbot.c_str(),"y")==0) || strcmp(topbot.c_str(),"1")==0);
 
- 
+
  eps1.setbounds(1,N+1);mu1.setbounds(1,N+1);b.setbounds(1,N+1);thick.setbounds(1,N);
  rho.setbounds(1,N+1);tau.setbounds(1,N+1);epsb.setbounds(1,N+1);chi.setbounds(1,N+1);fmu.setbounds(1,N+1);
  if (flag_topbotsym) M=N;
@@ -1127,7 +1127,7 @@ main ()
  }
  bm(1)=-bm(1);
  //printf("%s %s \n",b(1).toDec().c_str(),bm(1).toDec().c_str());
- 
+
  // find all the layers properties
  for (unsigned int i=1; i<=n_input; i++) {
    // upper layers
@@ -1179,14 +1179,14 @@ main ()
    //printf("%s %s %s %s %s %s \n",rhom(p).toDec().c_str(),taum(p).toDec().c_str(),epsbm(p).toDec().c_str(),
    //	chim(p).toDec().c_str(),fmum(p).toDec().c_str(),bm(p).toDec().c_str());
  }
-  
+
  // first layer (inside the chamber) is always vacuum
  eps1(1)=1;mu1(1)=1;
  eps1m(1)=1;mu1m(1)=1;
  // relativistic velocity factor beta
  beta=amp::sqrt(1-1/amp::sqr(gamma));
  //printf("%s %s\n",eps1(1).x.toDec().c_str(),eps1(1).y.toDec().c_str());
- 
+
  // construct the frequency scan
  // first estimation of the number of frequencies (for memory allocation)
  switch(typescan) {
@@ -1201,7 +1201,7 @@ main ()
      break;
    }
  freq=new double[nf];
- 
+
  // constructs unsorted version of the array freq
  nf=0;freq[0]=-1.;
  if (typescan==1) {
@@ -1227,10 +1227,10 @@ main ()
    nf++;
    }
  // nf is now the real number of frequencies
- 
+
  // sort the frequencies
  gsl_sort(freq, 1, nf);
- 
+
  // remove duplicate frequencies
  nfdup=0;
  for (int i=nf-2;i>=0; i--) {
@@ -1243,8 +1243,8 @@ main ()
  nf=nf-nfdup;
  //printf("%d\n",nf);
  //for (unsigned int i=0;i<nf;i++) printf("%d %13.8e\n",i,freq[i]);
- 
- 
+
+
  // set the output files names
  //sprintf(output,"W%s_%dlayersup_%dlayersdown%.2lfmm%s",machine,N,M,
  //	1e3*double(amp::ampf<Precision>(b(1)).toDouble()),commentoutput);
@@ -1257,7 +1257,7 @@ main ()
  sprintf(Zlongoutput,"Zlong%s.dat",output);
  sprintf(Zycstoutput,"Zycst%s.dat",output);
  sprintf(Input,"InputData%s.dat",output);
- 
+
  // writes the InputData file (copy of input file)
  std::ofstream InputFile (Input);
  for (unsigned int i=1; i<=n_input; i++) {
@@ -1278,12 +1278,12 @@ main ()
  fprintf(filZyquad,"Frequency [Hz]\tRe(Zyquad) [Ohm/m]\tIm(Zyquad) [Ohm/m]\n");
  fprintf(filZlong,"Frequency [Hz]\tRe(Zlong) [Ohm]\tIm(Zlong) [Ohm]\n");
  fprintf(filZycst,"Frequency [Hz]\tRe(Zycst) [Ohm]\tIm(Zycst) [Ohm]\n");
- 
- 
+
+
  // workspace allocation for gsl adaptative integration
  w=gsl_integration_workspace_alloc(limit);
  gsl_set_error_handler_off();
- 
+
  alpha00=std::complex<double>(0.,0.);
  alpha01=std::complex<double>(0.,0.);
  alpha02=std::complex<double>(0.,0.);
@@ -1292,15 +1292,15 @@ main ()
  tolintabs01=std::complex<double>(0.,0.);
  tolintabs02=std::complex<double>(0.,0.);
  tolintabs11=std::complex<double>(0.,0.);
- 
+
  // impedance computation at each frequency: beginning of the loop
  for (unsigned int i=0; i<nf; i++) {
-    
+
    mem=0;  // initialize memory at eahc frequency
    omega=amp::twopi<Precision>()*freq[i];
    k=omega/(beta*C);
    kovergamma=k/gamma;
-   
+
    // computes the layer properties for the angular freq. omega
    for (unsigned int p=2;p<=N+1; p++) {
      if (rho(p).isFiniteNumber()) {
@@ -1325,13 +1325,13 @@ main ()
 
    //printf("%s %s\n",b(1).toDec().c_str(),bm(1).toDec().c_str());
    //printf("%s %s %s\n",omega.toDec().c_str(),k.toDec().c_str(),kovergamma.toDec().c_str());
- 
+
    // computes alpha00
    x=integrate(1,M,N,b,bm,beta,eps1,eps1m,mu1,mu1m,omega,k,kovergamma,0,0,tolintabs00.real(),limit,w);
    y=integrate(0,M,N,b,bm,beta,eps1,eps1m,mu1,mu1m,omega,k,kovergamma,0,0,tolintabs00.imag(),limit,w);
    alpha00=std::complex<double>(x,y);
    //printf("alpha00: %13.8e %13.8e\n",alpha00.real(),alpha00.imag());
- 
+
    // computes alpha01
    if (flag_topbotsym==0) {
      // computes alpha01
@@ -1341,7 +1341,7 @@ main ()
      }
    else alpha01=std::complex<double>(0.,0.);
    //printf("alpha01: %13.8e %13.8e\n",alpha01.real(),alpha01.imag());
- 
+
    // computes alpha02
    x=integrate(1,M,N,b,bm,beta,eps1,eps1m,mu1,mu1m,omega, k,kovergamma,0,2,tolintabs02.real(),limit,w);
    y=integrate(0,M,N,b,bm,beta,eps1,eps1m,mu1,mu1m,omega,k,kovergamma,0,2,tolintabs02.imag(),limit,w);
@@ -1353,7 +1353,7 @@ main ()
    y=integrate(0,M,N,b,bm,beta,eps1,eps1m,mu1,mu1m,omega,k,kovergamma,1,1,tolintabs11.imag(),limit,w);
    alpha11=std::complex<double>(x,y);
    //printf("alpha11: %13.8e %13.8e\n",alpha11.real(),alpha11.imag());
-   
+
    // computes and writes the impedances
    cst=jimag*L*double(amp::ampf<Precision>(k*Z0/(beta*amp::sqr(gamma)*amp::twopi<Precision>())).toDouble());
    Zlong=cst*alpha00;
@@ -1369,17 +1369,17 @@ main ()
    fprintf(filZydip,"%13.8e %13.8e %13.8e\n",freq[i],Zydip.real(),Zydip.imag());
    fprintf(filZxquad,"%13.8e %13.8e %13.8e\n",freq[i],Zxquad.real(),Zxquad.imag());
    fprintf(filZyquad,"%13.8e %13.8e %13.8e\n",freq[i],Zyquad.real(),Zyquad.imag());
- 
-  
-   tolintabs00=tolintrel*std::complex<double>(std::abs(alpha00.real()),std::abs(alpha00.imag()));  
-   tolintabs01=tolintrel*std::complex<double>(std::abs(alpha01.real()),std::abs(alpha01.imag()));  
-   tolintabs02=tolintrel*std::complex<double>(std::abs(alpha02.real()),std::abs(alpha02.imag()));  
+
+
+   tolintabs00=tolintrel*std::complex<double>(std::abs(alpha00.real()),std::abs(alpha00.imag()));
+   tolintabs01=tolintrel*std::complex<double>(std::abs(alpha01.real()),std::abs(alpha01.imag()));
+   tolintabs02=tolintrel*std::complex<double>(std::abs(alpha02.real()),std::abs(alpha02.imag()));
    tolintabs11=tolintrel*std::complex<double>(std::abs(alpha11.real()),std::abs(alpha11.imag()));
    //std::cout << "tolintabs02: " << tolintabs02.real() << " " << tolintabs02.imag() << "\n";
 
    }
    // end of loop on frequencies
- 
+
  /*for (int i=1;i<=10000; i++){
    u=i*0.01;
    alpha00=integrand(0, 0, N+1, M+1, eps1, mu1, b, eps1m, mu1m, bm, u, omega, beta, k, kovergamma);
@@ -1388,17 +1388,17 @@ main ()
    //alpha02=integrand(0, 2, N+1, M+1, eps1, mu1, b, eps1m, mu1m, bm, (1-u)/u, omega, beta, k,kovergamma)/amp::sqr(u);
    printf("%13.8e %13.8e %13.8e\n",double(amp::ampf<Precision>(u).toDouble()),alpha02.real(),alpha02.imag());
  }*/
- 
- 
+
+
  gsl_integration_workspace_free(w);
-  
+
  fclose(filZxdip);
  fclose(filZydip);
  fclose(filZxquad);
  fclose(filZyquad);
  fclose(filZlong);
  fclose(filZycst);
- 
+
  time(&end);
  dif=difftime(end,start);
  printf("Elapsed time during calculation: %.2lf seconds\n",dif);
